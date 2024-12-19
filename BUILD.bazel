@@ -140,7 +140,6 @@ _VIRT_COMMON_MODULES = [
     "virtio_input.ko",
     "virtio_net.ko",
     "virtio_snd.ko",
-    "vkms.ko",
 ]
 
 _VIRT_AARCH64_MODULES = [
