@@ -3346,6 +3346,9 @@ cleanup:
 	if (device)
 		kref_put(&device->device_kref, dxgdevice_release);
 
+	if (process)
+		kref_put(&process->process_kref, dxgprocess_release);
+
 	if (sync_cb) {
 		kfree(sync_cb->objects);
 		kfree(sync_cb->fence_values);
