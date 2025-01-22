@@ -5508,11 +5508,12 @@ dxgk_get_shared_resource_adapter_luid(struct dxgprocess *process,
 	return -ENOTTY;
 }
 
-static int
-get_resource_host_nthandle(int guest_fd, unsigned long long *host_nthandle)
+static int get_resource_host_nthandle(int guest_fd,
+				      unsigned long long *host_nthandle,
+				      struct file **fput_file)
 {
 	struct dxgsharedresource *shared_resource = NULL;
-	struct file *file = NULL;
+	struct file *file;
 	int ret = 0;
 
 	file = fget(guest_fd);
@@ -5522,6 +5523,9 @@ get_resource_host_nthandle(int guest_fd, unsigned long long *host_nthandle)
 		ret = -EINVAL;
 		goto cleanup;
 	}
+
+	*fput_file = file;
+
 	if (file->f_op != &dxg_resource_fops) {
 		pr_err("invalid fd type: %x", guest_fd);
 		ret = -EINVAL;
@@ -5548,11 +5552,12 @@ cleanup:
 	return ret;
 }
 
-static int
-get_syncobj_host_nthandle(int guest_fd, unsigned long long *host_nthandle)
+static int get_syncobj_host_nthandle(int guest_fd,
+				     unsigned long long *host_nthandle,
+				     struct file **fput_file)
 {
 	struct dxgsharedsyncobject *syncobj_fd = NULL;
-	struct file *file = NULL;
+	struct file *file;
 	int ret = 0;
 
 	file = fget(guest_fd);
@@ -5562,6 +5567,8 @@ get_syncobj_host_nthandle(int guest_fd, unsigned long long *host_nthandle)
 		ret = -EINVAL;
 		goto cleanup;
 	}
+
+	*fput_file = file;
 
 	if (file->f_op != &dxg_syncobj_fops) {
 		pr_err("invalid fd: %x", guest_fd);
@@ -5589,6 +5596,7 @@ dxgk_presentvirtual(struct dxgprocess *process, void *__user inargs)
 	__u64 acquire_semaphore_nthandle = 0;
 	__u64 release_semaphore_nthandle = 0;
 	__u64 composition_memory_nthandle = 0;
+	struct file *files_to_put[3] = { NULL };
 	int ret;
 
 	ret = copy_from_user(&args, inargs, sizeof(args));
@@ -5600,7 +5608,9 @@ dxgk_presentvirtual(struct dxgprocess *process, void *__user inargs)
 
 	// It is ok if -1 is passed for the acquire semaphore.
 	if (args.acquire_semaphore_fd != -1) {
-		ret = get_syncobj_host_nthandle(args.acquire_semaphore_fd, &acquire_semaphore_nthandle);
+		ret = get_syncobj_host_nthandle(args.acquire_semaphore_fd,
+						&acquire_semaphore_nthandle,
+						&files_to_put[0]);
 		if (ret) {
 			pr_err("%s failed to host nthandle for fd %x", __func__, args.acquire_semaphore_fd);
 			ret = -EINVAL;
@@ -5608,14 +5618,18 @@ dxgk_presentvirtual(struct dxgprocess *process, void *__user inargs)
 		}
 	}
 
-	ret = get_syncobj_host_nthandle(args.release_semaphore_fd, &release_semaphore_nthandle);
+	ret = get_syncobj_host_nthandle(args.release_semaphore_fd,
+					&release_semaphore_nthandle,
+					&files_to_put[1]);
 	if (ret) {
 		pr_err("%s failed to host nthandle for fd %x", __func__, args.acquire_semaphore_fd);
 		ret = -EINVAL;
 		goto cleanup;
 	}
 
-	ret = get_resource_host_nthandle(args.composition_memory_fd, &composition_memory_nthandle);
+	ret = get_resource_host_nthandle(args.composition_memory_fd,
+					 &composition_memory_nthandle,
+					 &files_to_put[2]);
 	if (ret) {
 		pr_err("%s failed to host nthandle for fd %x", __func__, args.composition_memory_fd);
 		ret = -EINVAL;
@@ -5626,7 +5640,12 @@ dxgk_presentvirtual(struct dxgprocess *process, void *__user inargs)
 		acquire_semaphore_nthandle, release_semaphore_nthandle, composition_memory_nthandle);
 
 cleanup:
-
+	if (files_to_put[0])
+		fput(files_to_put[0]);
+	if (files_to_put[1])
+		fput(files_to_put[1]);
+	if (files_to_put[2])
+		fput(files_to_put[2]);
 	dev_dbg(dxgglobaldev, "ioctl:%s %s %d", errorstr(ret), __func__, ret);
 	return ret;
 }
@@ -5640,9 +5659,12 @@ static int dxgk_presentvirtual2(struct dxgprocess *process, void *__user inargs)
 	__u64 release_target_semaphore_nthandle = 0;
 	__u64 target_memory_nthandle = 0;
 	u64 *layer_memory_nthandles = NULL;
+	int max_num_files_to_put = 0;
+	struct file **files_to_put = NULL;
 	__u32 *layer_fds = NULL;
 	__u32 layer_idx = 0;
 	int ret = 0;
+	int i = 0;
 
 	// copy args from user space to kernel space
 	ret = copy_from_user(&args, inargs, sizeof(args));
@@ -5663,6 +5685,16 @@ static int dxgk_presentvirtual2(struct dxgprocess *process, void *__user inargs)
 	// allocate space to copy the guest layer fds from user to kernel space.
 	layer_fds = vzalloc(sizeof(__s32) * args.layer_memory_fd_count);
 	if (layer_fds == NULL) {
+		ret = -ENOMEM;
+		goto cleanup;
+	}
+
+	// We need to fput the files we fget. The max number we'll have is the number of layers plus
+	// one each for acquire of layers, relase of layers, acquire of target, release of target, and
+	// the target buffer itself.
+	max_num_files_to_put = args.layer_memory_fd_count + 5;
+	files_to_put = vzalloc(sizeof(struct file *) * max_num_files_to_put);
+	if (files_to_put == NULL) {
 		ret = -ENOMEM;
 		goto cleanup;
 	}
@@ -5692,7 +5724,7 @@ static int dxgk_presentvirtual2(struct dxgprocess *process, void *__user inargs)
 	if (args.acquire_layers_semaphore_fd != -1) {
 		ret = get_syncobj_host_nthandle(
 			args.acquire_layers_semaphore_fd,
-			&acquire_layers_semaphore_nthandle);
+			&acquire_layers_semaphore_nthandle, &files_to_put[0]);
 		if (ret) {
 			pr_err("%s failed to host nthandle for fd %x", __func__,
 			       args.acquire_layers_semaphore_fd);
@@ -5705,7 +5737,7 @@ static int dxgk_presentvirtual2(struct dxgprocess *process, void *__user inargs)
 	if (args.acquire_target_semaphore_fd != -1) {
 		ret = get_syncobj_host_nthandle(
 			args.acquire_target_semaphore_fd,
-			&acquire_target_semaphore_nthandle);
+			&acquire_target_semaphore_nthandle, &files_to_put[1]);
 		if (ret) {
 			pr_err("%s failed to host nthandle for fd %x", __func__,
 			       args.acquire_target_semaphore_fd);
@@ -5716,7 +5748,8 @@ static int dxgk_presentvirtual2(struct dxgprocess *process, void *__user inargs)
 
 	// get handle from release layers semaphore file descriptor.
 	ret = get_syncobj_host_nthandle(args.release_layers_semaphore_fd,
-					&release_layers_semaphore_nthandle);
+					&release_layers_semaphore_nthandle,
+					&files_to_put[2]);
 	if (ret) {
 		pr_err("%s failed to host nthandle for fd %x", __func__,
 		       args.release_layers_semaphore_fd);
@@ -5726,7 +5759,8 @@ static int dxgk_presentvirtual2(struct dxgprocess *process, void *__user inargs)
 
 	// get handle from release target semaphore file descriptor.
 	ret = get_syncobj_host_nthandle(args.release_target_semaphore_fd,
-					&release_target_semaphore_nthandle);
+					&release_target_semaphore_nthandle,
+					&files_to_put[3]);
 	if (ret) {
 		pr_err("%s failed to host nthandle for fd %x", __func__,
 		       args.release_target_semaphore_fd);
@@ -5736,7 +5770,8 @@ static int dxgk_presentvirtual2(struct dxgprocess *process, void *__user inargs)
 
 	// get handle from composition target memory file descriptor.
 	ret = get_resource_host_nthandle(args.target_memory_fd,
-					 &target_memory_nthandle);
+					 &target_memory_nthandle,
+					 &files_to_put[4]);
 	if (ret) {
 		pr_err("%s failed to host nthandle for fd %x", __func__,
 		       args.target_memory_fd);
@@ -5749,7 +5784,8 @@ static int dxgk_presentvirtual2(struct dxgprocess *process, void *__user inargs)
 	     layer_idx++) {
 		ret = get_resource_host_nthandle(
 			layer_fds[layer_idx],
-			&layer_memory_nthandles[layer_idx]);
+			&layer_memory_nthandles[layer_idx],
+			&files_to_put[5 + layer_idx]);
 		if (ret) {
 			pr_err("%s failed to host nthandle for fd %x", __func__,
 			       layer_fds[layer_idx]);
@@ -5776,6 +5812,14 @@ cleanup:
 	// free memory allocated for the layer guest fds.
 	if (layer_fds) {
 		vfree(layer_fds);
+	}
+
+	if (files_to_put) {
+		for (i = 0; i < max_num_files_to_put; i++) {
+			if (files_to_put[i] != NULL)
+				fput(files_to_put[i]);
+		}
+		vfree(files_to_put);
 	}
 
 	return ret;
