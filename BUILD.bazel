@@ -82,6 +82,21 @@ filegroup(
 )
 
 filegroup(
+    name = "vkms_sources",
+    srcs = [
+        "vkms/vkms_composer.c",
+        "vkms/vkms_crtc.c",
+        "vkms/vkms_drv.c",
+        "vkms/vkms_drv.h",
+        "vkms/vkms_formats.c",
+        "vkms/vkms_formats.h",
+        "vkms/vkms_output.c",
+        "vkms/vkms_plane.c",
+        "vkms/vkms_writeback.c",
+    ],
+)
+
+filegroup(
     name = "virtual_device_aarch64_common_sources",
     srcs = [
         ":common_sources",
@@ -225,6 +240,14 @@ ddk_module(
     deps = [":common_headers"],
 )
 
+ddk_module(
+    name = "x86_64/vkms",
+    srcs = [":vkms_sources"],
+    out = "vkms.ko",
+    kernel_build = ":virtual_device_x86_64",
+    deps = [":common_headers"],
+)
+
 kernel_module_group(
     name = "virtual_device_x86_64_external_modules",
     srcs = [
@@ -232,6 +255,7 @@ kernel_module_group(
         ":x86_64/goldfish_drivers/goldfish_pipe",
         ":x86_64/goldfish_drivers/goldfish_sync",
         ":x86_64/v4l2loopback",
+        ":x86_64/vkms",
         "//common-modules/virtio-media/driver:x86_64/virtio-media",
     ],
 )
@@ -322,6 +346,7 @@ _FAKE_VIRT_DEVICE_X86_64_MODULES_LIST = [
     "nd_virtio.ko",
     "test_meminit.ko",
     "v4l2loopback.ko",
+    "vkms.ko",
     "virtio_pmem.ko",
 ]
 
@@ -427,6 +452,14 @@ ddk_module(
     deps = [":common_headers"],
 )
 
+ddk_module(
+    name = "aarch64/vkms",
+    srcs = [":vkms_sources"],
+    out = "vkms.ko",
+    kernel_build = ":virtual_device_aarch64",
+    deps = [":common_headers"],
+)
+
 kernel_module_group(
     name = "virtual_device_aarch64_external_modules",
     srcs = [
@@ -434,6 +467,7 @@ kernel_module_group(
         ":aarch64/goldfish_drivers/goldfish_pipe",
         ":aarch64/goldfish_drivers/goldfish_sync",
         ":aarch64/v4l2loopback",
+        ":aarch64/vkms",
         "//common-modules/virtio-media/driver:aarch64/virtio-media",
     ],
 )
@@ -622,6 +656,14 @@ ddk_module(
     deps = [":common_headers"],
 )
 
+ddk_module(
+    name = "aarch64_16k/vkms",
+    srcs = [":vkms_sources"],
+    out = "vkms.ko",
+    kernel_build = ":virtual_device_aarch64_16k",
+    deps = [":common_headers"],
+)
+
 kernel_module_group(
     name = "virtual_device_aarch64_16k_external_modules",
     srcs = [
@@ -629,6 +671,7 @@ kernel_module_group(
         ":aarch64_16k/goldfish_drivers/goldfish_pipe",
         ":aarch64_16k/goldfish_drivers/goldfish_sync",
         ":aarch64_16k/v4l2loopback",
+        ":aarch64_16k/vkms",
         "//common-modules/virtio-media/driver:aarch64_16k/virtio-media",
     ],
 )
