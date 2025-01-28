@@ -67,6 +67,12 @@ def kleaf_test(
         **private_kwargs
     )
 
+    _ddk_assembly_test(
+        name = name + "_ddk_assembly_test",
+        kernel_build = kernel_build,
+        **private_kwargs
+    )
+
     _ddk_long_arg_list_test(
         name = name + "_ddk_long_arg_list_test",
         kernel_build = kernel_build,
@@ -112,6 +118,7 @@ def kleaf_test(
             name + "_ddk_module_config_test",
             name + "_ddk_submodule_config_test",
             name + "_ddk_cflags_test",
+            name + "_ddk_assembly_test",
             name + "_ddk_long_arg_list_test",
             name + "_ddk_submodule_config_conditional_srcs_test",
             name + "_ddk_genfiles_test",
@@ -563,6 +570,26 @@ def _ddk_cflags_test(name, kernel_build, **private_kwargs):
             name + "_copts",
             name + "_copts_source_is_out",
             name + "_copts_out_is_nested",
+        ],
+        **private_kwargs
+    )
+
+def _ddk_assembly_test(name, kernel_build, **private_kwargs):
+    ddk_module(
+        name = name + "_asopts",
+        kernel_build = kernel_build,
+        out = name + "_asopts.ko",
+        srcs = [
+            "assembly_test/mod.c",
+            "assembly_test/foo.S",
+        ],
+        asopts = ["-DASOPTS_DEFINE"],
+        **private_kwargs
+    )
+    build_test(
+        name = name,
+        targets = [
+            name + "_asopts",
         ],
         **private_kwargs
     )
