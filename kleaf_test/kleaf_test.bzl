@@ -73,6 +73,12 @@ def kleaf_test(
         **private_kwargs
     )
 
+    _ddk_linkopts_test(
+        name = name + "_ddk_linkopts_test",
+        kernel_build = kernel_build,
+        **private_kwargs
+    )
+
     _ddk_long_arg_list_test(
         name = name + "_ddk_long_arg_list_test",
         kernel_build = kernel_build,
@@ -119,6 +125,7 @@ def kleaf_test(
             name + "_ddk_submodule_config_test",
             name + "_ddk_cflags_test",
             name + "_ddk_assembly_test",
+            name + "_ddk_linkopts_test",
             name + "_ddk_long_arg_list_test",
             name + "_ddk_submodule_config_conditional_srcs_test",
             name + "_ddk_genfiles_test",
@@ -593,6 +600,28 @@ def _ddk_assembly_test(name, kernel_build, **private_kwargs):
         name = name,
         targets = [
             name + "_asopts",
+        ],
+        **private_kwargs
+    )
+
+def _ddk_linkopts_test(name, kernel_build, **private_kwargs):
+    ddk_module(
+        name = name + "_linkopts",
+        kernel_build = kernel_build,
+        out = name + "_linkopts.ko",
+        srcs = [
+            "linkopts_test.c",
+        ],
+        linkopts = [
+            "--defsym",
+            "foo_alias=foo",
+        ],
+        **private_kwargs
+    )
+    build_test(
+        name = name,
+        targets = [
+            name + "_linkopts",
         ],
         **private_kwargs
     )
