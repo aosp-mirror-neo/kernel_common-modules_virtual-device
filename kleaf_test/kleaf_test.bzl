@@ -582,7 +582,10 @@ def _ddk_assembly_test(name, kernel_build, **private_kwargs):
         srcs = [
             "assembly_test/mod.c",
             "assembly_test/foo.S",
+            "assembly_test/exported_includes/myinclude.h",
         ],
+        local_defines = ["LOCAL_DEFINE"],
+        includes = ["assembly_test/exported_includes"],
         asopts = ["-DASOPTS_DEFINE"],
         **private_kwargs
     )
