@@ -67,6 +67,18 @@ def kleaf_test(
         **private_kwargs
     )
 
+    _ddk_assembly_test(
+        name = name + "_ddk_assembly_test",
+        kernel_build = kernel_build,
+        **private_kwargs
+    )
+
+    _ddk_linkopts_test(
+        name = name + "_ddk_linkopts_test",
+        kernel_build = kernel_build,
+        **private_kwargs
+    )
+
     _ddk_long_arg_list_test(
         name = name + "_ddk_long_arg_list_test",
         kernel_build = kernel_build,
@@ -112,6 +124,8 @@ def kleaf_test(
             name + "_ddk_module_config_test",
             name + "_ddk_submodule_config_test",
             name + "_ddk_cflags_test",
+            name + "_ddk_assembly_test",
+            name + "_ddk_linkopts_test",
             name + "_ddk_long_arg_list_test",
             name + "_ddk_submodule_config_conditional_srcs_test",
             name + "_ddk_genfiles_test",
@@ -132,7 +146,6 @@ def _ddk_module_dep_test(name, kernel_build, **private_kwargs):
         out = name + "_mod.ko",
         kernel_build = kernel_build,
         srcs = ["client.c", "lib.c"],
-        deps = ["//common:all_headers_x86_64"],
         **private_kwargs
     )
     ddk_module(
@@ -144,7 +157,6 @@ def _ddk_module_dep_test(name, kernel_build, **private_kwargs):
             "child_lib.c",
         ],
         deps = [
-            "//common:all_headers_x86_64",
             name + "_module",
         ],
         **private_kwargs
@@ -175,7 +187,6 @@ def _ddk_module_include_test(name, kernel_build, **private_kwargs):
             "include/include_test_lib.h",
         ],
         includes = ["include"],
-        deps = ["//common:all_headers_x86_64"],
         **private_kwargs
     )
 
@@ -189,7 +200,6 @@ def _ddk_module_include_test(name, kernel_build, **private_kwargs):
             "include/include_test_lib.h",
         ],
         linux_includes = ["include"],
-        deps = ["//common:all_headers_x86_64"],
         **private_kwargs
     )
 
@@ -210,7 +220,6 @@ def _ddk_module_include_test(name, kernel_build, **private_kwargs):
             "include/include_test_lib.h",
         ],
         deps = [
-            "//common:all_headers_x86_64",
             name + "_local_includes_headers",
         ],
         **private_kwargs
@@ -226,7 +235,6 @@ def _ddk_module_include_test(name, kernel_build, **private_kwargs):
             "include/include_test_lib.h",
         ],
         copts = ["-include", "$(location include/include_test_lib.h)"],
-        deps = ["//common:all_headers_x86_64"],
         **private_kwargs
     )
 
@@ -240,7 +248,6 @@ def _ddk_module_include_test(name, kernel_build, **private_kwargs):
             "include/include_test_lib.h",
         ],
         deps = [
-            "//common:all_headers_x86_64",
         ],
         textual_hdrs = [
             name + "_local_includes_headers",
@@ -272,7 +279,6 @@ def _ddk_module_conditional_srcs_test(name, kernel_build, **private_kwargs):
                 True: ["lib.c"],
             },
         },
-        deps = ["//common:all_headers_x86_64"],
         out = name + "_module.ko",
         **private_kwargs
     )
@@ -288,7 +294,6 @@ def _ddk_module_conditional_srcs_test(name, kernel_build, **private_kwargs):
                 True: ["lib.c"],
             },
         },
-        deps = ["//common:all_headers_x86_64"],
         out = name + "_module.ko",
         **private_kwargs
     )
@@ -327,7 +332,6 @@ def _ddk_module_config_test(name, kernel_build, **private_kwargs):
                 True: ["lib.c"],
             },
         },
-        deps = ["//common:all_headers_x86_64"],
         **private_kwargs
     )
 
@@ -355,7 +359,6 @@ def _ddk_module_config_test(name, kernel_build, **private_kwargs):
                 True: ["lib.c"],
             },
         },
-        deps = ["//common:all_headers_x86_64"],
         **private_kwargs
     )
 
@@ -372,7 +375,6 @@ def _ddk_module_config_test(name, kernel_build, **private_kwargs):
                 True: ["lib.c"],
             },
         },
-        deps = ["//common:all_headers_x86_64"],
         **private_kwargs
     )
 
@@ -408,7 +410,6 @@ def _ddk_module_config_test(name, kernel_build, **private_kwargs):
                 True: ["lib.c"],
             },
         },
-        deps = ["//common:all_headers_x86_64"],
         **private_kwargs
     )
 
@@ -424,7 +425,6 @@ def _ddk_module_config_test(name, kernel_build, **private_kwargs):
             },
         },
         deps = [
-            "//common:all_headers_x86_64",
             name + "_module",
         ],
         **private_kwargs
@@ -448,7 +448,6 @@ def _ddk_module_config_test(name, kernel_build, **private_kwargs):
             },
         },
         deps = [
-            "//common:all_headers_x86_64",
             name + "_headers",
         ],
         **private_kwargs
@@ -501,7 +500,6 @@ def _ddk_submodule_config_test(name, kernel_build, **private_kwargs):
         name = name + "_submodule",
         out = "submodule.ko",
         srcs = ["must_be_set.c"],
-        deps = ["//common:all_headers_x86_64"],
     )
 
     build_test(
@@ -520,7 +518,6 @@ def _ddk_cflags_test(name, kernel_build, **private_kwargs):
         srcs = [
             "copts_test/copts.c",
         ],
-        deps = ["//common:all_headers_x86_64"],
         local_defines = [
             "NUMBER=123",
             "BOOLDEF",
@@ -541,7 +538,6 @@ def _ddk_cflags_test(name, kernel_build, **private_kwargs):
         srcs = [
             "copts_test/copts.c",
         ],
-        deps = ["//common:all_headers_x86_64"],
         local_defines = [
             "NUMBER=123",
             "BOOLDEF",
@@ -562,7 +558,6 @@ def _ddk_cflags_test(name, kernel_build, **private_kwargs):
         srcs = [
             "copts_test/copts.c",
         ],
-        deps = ["//common:all_headers_x86_64"],
         local_defines = [
             "NUMBER=123",
             "BOOLDEF",
@@ -576,12 +571,71 @@ def _ddk_cflags_test(name, kernel_build, **private_kwargs):
         **private_kwargs
     )
 
+    ddk_module(
+        name = name + "_removed_copts",
+        kernel_build = kernel_build,
+        out = "copts_test/mymodule.ko",
+        srcs = [
+            "copts_test/use_float.c",
+        ],
+        removed_copts = [
+            "-mgeneral-regs-only",
+        ],
+        **private_kwargs
+    )
+
     build_test(
         name = name,
         targets = [
             name + "_copts",
             name + "_copts_source_is_out",
             name + "_copts_out_is_nested",
+            name + "_removed_copts",
+        ],
+        **private_kwargs
+    )
+
+def _ddk_assembly_test(name, kernel_build, **private_kwargs):
+    ddk_module(
+        name = name + "_asopts",
+        kernel_build = kernel_build,
+        out = name + "_asopts.ko",
+        srcs = [
+            "assembly_test/mod.c",
+            "assembly_test/foo.S",
+            "assembly_test/exported_includes/myinclude.h",
+        ],
+        local_defines = ["LOCAL_DEFINE"],
+        includes = ["assembly_test/exported_includes"],
+        asopts = ["-DASOPTS_DEFINE"],
+        **private_kwargs
+    )
+    build_test(
+        name = name,
+        targets = [
+            name + "_asopts",
+        ],
+        **private_kwargs
+    )
+
+def _ddk_linkopts_test(name, kernel_build, **private_kwargs):
+    ddk_module(
+        name = name + "_linkopts",
+        kernel_build = kernel_build,
+        out = name + "_linkopts.ko",
+        srcs = [
+            "linkopts_test.c",
+        ],
+        linkopts = [
+            "--defsym",
+            "foo_alias=foo",
+        ],
+        **private_kwargs
+    )
+    build_test(
+        name = name,
+        targets = [
+            name + "_linkopts",
         ],
         **private_kwargs
     )
@@ -592,7 +646,6 @@ def _ddk_long_arg_list_test(name, kernel_build, **private_kwargs):
         out = name + "_module.ko",
         kernel_build = kernel_build,
         srcs = ["client.c", "lib.c"],
-        deps = ["//common:all_headers_x86_64"],
         includes = [str(e) for e in range(100000)],
         **private_kwargs
     )
@@ -644,7 +697,6 @@ def _ddk_submodule_config_conditional_srcs_test(name, kernel_build, **private_kw
                 True: ["must_be_set.c"],
             },
         },
-        deps = ["//common:all_headers_x86_64"],
         **private_kwargs
     )
 
@@ -702,7 +754,6 @@ def _ddk_genfiles_test(name, kernel_build, **private_kwargs):
         hdrs = [
             name + "_exported_header",
         ],
-        deps = ["//common:all_headers_x86_64"],
         includes = [name],
         **private_kwargs
     )
@@ -714,7 +765,6 @@ def _ddk_genfiles_test(name, kernel_build, **private_kwargs):
         srcs = ["genfiles_test/child.c"],
         deps = [
             name + "_module",
-            "//common:all_headers_x86_64",
         ],
         **private_kwargs
     )
@@ -730,7 +780,6 @@ def _ddk_genfiles_test(name, kernel_build, **private_kwargs):
         hdrs = [
             name + "_exported_header",
         ],
-        deps = ["//common:all_headers_x86_64"],
         includes = [name],
         **private_kwargs
     )
@@ -749,7 +798,6 @@ def _ddk_genfiles_test(name, kernel_build, **private_kwargs):
         srcs = ["genfiles_test/child.c"],
         deps = [
             name + "_submodule_module",
-            "//common:all_headers_x86_64",
         ],
         **private_kwargs
     )
