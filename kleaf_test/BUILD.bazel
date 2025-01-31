@@ -7,22 +7,24 @@ load(":kleaf_test.bzl", "kleaf_test")
 kernel_build(
     name = "test_kernel",
     srcs = [
-        "//common:kernel_x86_64_sources",
+        "//common:kernel_aarch64_sources",
     ],
     outs = ["fake.dtb"],
-    arch = "x86_64",
-    base_kernel = "//common:kernel_x86_64",
+    arch = "arm64",
+    base_kernel = "//common:kernel_aarch64",
     build_config = "build.config.kleaf_test",
-    defconfig_fragments = [
-        "kleaf_test.fragment",
-    ],
+    defconfig = "//common:arch/arm64/configs/gki_defconfig",
     dtstree = "//common-modules/virtual-device/kleaf_test/dts",
     kconfig_ext = "Kconfig.ext",
     make_goals = [
         "modules",
         "dtbs",
     ],
+    makefile = "//common:Makefile",
     module_outs = [],
+    post_defconfig_fragments = [
+        "kleaf_test.fragment",
+    ],
     visibility = [":__subpackages__"],
 )
 
