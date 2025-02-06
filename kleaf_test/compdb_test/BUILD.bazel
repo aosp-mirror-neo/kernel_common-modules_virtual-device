@@ -1,0 +1,80 @@
+# Copyright (C) 2025 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load(
+    "@kleaf//build/kernel/kleaf:kernel.bzl",
+    "ddk_module",
+    "kernel_compile_commands",
+)
+load("@rules_python//python:defs.bzl", "py_binary")
+load(":compdb_flags_test.bzl", "compdb_flags_test")
+
+ddk_module(
+    name = "module_1",
+    srcs = [
+        "empty.S",
+        "module_1.c",
+    ],
+    out = "module.ko",
+    kernel_build = "@kleaf//common:kernel_aarch64",
+    local_defines = ["TEST"],
+)
+
+kernel_compile_commands(
+    name = "module_1_compdb",
+    deps = [":module_1"],
+)
+
+compdb_flags_test(
+    name = "module_1_flags_test",
+    target = ":module_1_compdb",
+)
+
+ddk_module(
+    name = "module_2",
+    srcs = [
+        "subdir/empty.S",
+        "subdir/module_2.c",
+    ],
+    out = "subdir/module.ko",
+    kernel_build = "@kleaf//common:kernel_aarch64",
+    local_defines = ["TEST"],
+)
+
+kernel_compile_commands(
+    name = "module_2_compdb",
+    deps = [":module_2"],
+)
+
+compdb_flags_test(
+    name = "module_2_flags_test",
+    target = ":module_2_compdb",
+)
+
+py_binary(
+    name = "compdb_flags_test",
+    srcs = ["compdb_flags_test.py"],
+    deps = [
+        "@io_abseil_py//absl/testing:absltest",
+    ],
+)
+
+test_suite(
+    name = "compdb_test",
+    tests = [
+        # keep sorted
+        ":module_1_flags_test",
+        ":module_2_flags_test",
+    ],
+)
