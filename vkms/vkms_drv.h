@@ -12,6 +12,8 @@
 #include <drm/drm_encoder.h>
 #include <drm/drm_writeback.h>
 
+#define DEFAULT_DEVICE_NAME "vkms"
+
 #define XRES_MIN    10
 #define YRES_MIN    10
 
@@ -189,20 +191,7 @@ struct vkms_output {
 	spinlock_t composer_lock;
 };
 
-/**
- * struct vkms_config - General configuration for VKMS driver
- *
- * @writeback: If true, a writeback buffer can be attached to the CRTC
- * @cursor: If true, a cursor plane is created in the VKMS device
- * @overlay: If true, NUM_OVERLAY_PLANES will be created for the VKMS device
- * @dev: Used to store the current VKMS device. Only set when the device is instantiated.
- */
-struct vkms_config {
-	bool writeback;
-	bool cursor;
-	bool overlay;
-	struct vkms_device *dev;
-};
+struct vkms_config;
 
 /**
  * struct vkms_device - Description of a VKMS device
@@ -215,7 +204,7 @@ struct vkms_config {
 struct vkms_device {
 	struct drm_device drm;
 	struct platform_device *platform;
-	const struct vkms_config *config;
+	struct vkms_config *config;
 };
 
 /*
@@ -233,6 +222,10 @@ struct vkms_device {
 
 #define to_vkms_plane_state(target)\
 	container_of(target, struct vkms_plane_state, base.base)
+
+/* VKMS device */
+int vkms_create(struct vkms_config *config);
+void vkms_destroy(struct vkms_config *config);
 
 /**
  * vkms_crtc_init() - Initialize a CRTC for VKMS
