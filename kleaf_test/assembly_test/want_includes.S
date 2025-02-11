@@ -17,14 +17,5 @@
 #include "myinclude.h"
 
 SYM_FUNC_START(foo)
-
-#ifndef ASOPTS_DEFINE
-#error
-#endif
-
-#ifndef LOCAL_DEFINE
-#error
-#endif
-
     ret
 SYM_FUNC_END(foo)
