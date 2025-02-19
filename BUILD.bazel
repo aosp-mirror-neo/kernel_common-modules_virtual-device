@@ -49,14 +49,6 @@ filegroup(
 )
 
 filegroup(
-    name = "arm_fragment",
-    srcs = [
-        "arm.fragment",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
     name = "goldfish_address_space_sources",
     srcs = [
         "goldfish_drivers/defconfig_test.h",
@@ -695,7 +687,6 @@ kernel_build(
         "zImage",
     ],
     arch = "arm",
-    build_config = "//common:build.config.common",
     check_defconfig = "disabled",
     defconfig = "//common:arch/arm64/configs/gki_defconfig",
     kmi_symbol_list_strict_mode = False,
