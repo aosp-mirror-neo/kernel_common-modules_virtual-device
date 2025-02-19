@@ -1,0 +1,46 @@
+# Enable ARM-specific options that unlock other options
+CONFIG_ARM_LPAE=y
+CONFIG_HIGHMEM=y
+CONFIG_KERNEL_MODE_NEON=y
+CONFIG_NEON=y
+CONFIG_SMP=y
+CONFIG_UNWINDER_FRAME_POINTER=y
+CONFIG_VFP=y
+CONFIG_VFPv3=y
+# CONFIG_WERROR is not set
+
+# Switch back on options that CONFIG_ARM + arm64 gki_defconfig turns off
+CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y
+CONFIG_CPUSETS=y
+CONFIG_CPUSETS_V1=y
+CONFIG_EFI=y
+CONFIG_ENERGY_MODEL=y
+CONFIG_LIBNVDIMM=y
+CONFIG_RT_SOFTIRQ_AWARE_SCHED=y
+CONFIG_SCHED_MC=y
+CONFIG_SWIOTLB_DYNAMIC=y
+CONFIG_TASKSTATS=y
+CONFIG_THERMAL_GOV_POWER_ALLOCATOR=y
+CONFIG_TRANSPARENT_HUGEPAGE=y
+CONFIG_TRANSPARENT_HUGEPAGE_MADVISE=y
+CONFIG_UCLAMP_BUCKETS_COUNT=20
+CONFIG_UCLAMP_TASK=y
+CONFIG_UCLAMP_TASK_GROUP=y
+
+# ARM switches efivarfs on by default
+# CONFIG_EFIVAR_FS is not set
+
+# Match arm64 default
+CONFIG_HZ_250=y
+
+# MTE and SW_TAGS aren't available on ARMv7-A, so this is generic KASAN
+# which just wastes memory and can't provide KFENCE anyway
+# CONFIG_KASAN is not set
+
+# GKI wants 32, but on 32-bit ARM only 16 are supported if DEBUG_KERNEL
+# and KMAP_LOCAL are enabled, and KMAP_LOCAL is enabled by HIGHMEM,
+# which is a needed option
+CONFIG_NR_CPUS=16
+
+# b/271887158
+# CONFIG_ARCH_SUNXI is not set
