@@ -49,6 +49,14 @@ filegroup(
 )
 
 filegroup(
+    name = "arm_fragment",
+    srcs = [
+        "arm.fragment",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
     name = "goldfish_address_space_sources",
     srcs = [
         "goldfish_drivers/defconfig_test.h",
@@ -86,6 +94,15 @@ filegroup(
     srcs = [
         ":common_sources",
         "//common:kernel_aarch64_sources",
+    ],
+)
+
+filegroup(
+    name = "virtual_device_arm_common_sources",
+    srcs = [
+        ":common_sources",
+        # We don't have an arm-specific source list, so use the common one.
+        "//common:common_kernel_sources",
     ],
 )
 
@@ -667,6 +684,75 @@ pkg_install(
     name = "virtual_device_aarch64_16k_dist",
     srcs = [":virtual_device_aarch64_16k_dist_files"],
     destdir = "out/virtual_device_aarch64_16k/dist",
+)
+
+kernel_build(
+    name = "virtual_device_arm",
+    srcs = [":virtual_device_arm_common_sources"],
+    outs = [
+        "System.map",
+        "vmlinux",
+        "zImage",
+    ],
+    arch = "arm",
+    build_config = "//common:build.config.common",
+    check_defconfig = "disabled",
+    defconfig = "//common:arch/arm64/configs/gki_defconfig",
+    kmi_symbol_list_strict_mode = False,
+    make_goals = [
+        "modules",
+        "zImage",
+    ],
+    makefile = "//common:Makefile",
+    module_outs = [
+        paths.basename(module)
+        for module in get_gki_modules_list("arm")
+    ] + [
+        paths.basename(module)
+        for module in get_kunit_modules_list("arm")
+    ] + _VIRT_COMMON_MODULES + _VIRT_AARCH64_MODULES + [
+        # keep sorted
+        "cctrng.ko",
+        "open-dice.ko",
+    ],
+    post_defconfig_fragments = [
+        "virtual_device_core.fragment",
+        "virtual_device.fragment",
+        "aarch64.fragment",
+        "arm.fragment",
+    ],
+    strip_modules = False,
+    trim_nonlisted_kmi = False,
+)
+
+kernel_modules_install(
+    name = "virtual_device_arm_modules_install",
+    kernel_build = ":virtual_device_arm",
+)
+
+initramfs(
+    name = "virtual_device_arm_initramfs",
+    kernel_modules_install = ":virtual_device_arm_modules_install",
+    modules_blocklist = ":modules.blocklist",
+    modules_options = ":modules.options",
+    ramdisk_compression = "lz4",
+)
+
+pkg_files(
+    name = "virtual_device_arm_dist_files",
+    srcs = [
+        ":virtual_device_arm",
+        ":virtual_device_arm_initramfs",
+        ":virtual_device_arm_modules_install",
+    ],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
+    name = "virtual_device_arm_dist",
+    srcs = [":virtual_device_arm_dist_files"],
+    destdir = "out/virtual_device_arm/dist",
 )
 
 kernel_build(
