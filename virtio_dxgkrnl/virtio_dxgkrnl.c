@@ -446,7 +446,7 @@ int dxgvmb_send_sync_msg(struct dxgvmbuschannel *channel, void *command,
 	command_queue_locked = true;
 	dev_dbg(dxgglobaldev, "virtqueue_add_sgs for command #%d",
 		cur_command_seqno);
-	err = virtqueue_add_sgs(vp->command_vq, sgs, 1, 1, ctx, GFP_ATOMIC);
+	err = virtqueue_add_sgs(vp->command_vq, sgs, 1, 1, ctx, GFP_KERNEL);
 	if (err) {
 		dev_err(&vp->vdev->dev, "%s: failed to add output: %d\n",
 			__func__, err);
@@ -525,7 +525,7 @@ static int initialize_adapters(struct virtio_dxgkrnl *vp)
 		vp->vdev, offsetof(struct virtio_dxgkrnl_config, num_adapters));
 
 	req_size = sizeof(struct virtio_dxgkrnl_enum_adapters_req);
-	req = kzalloc(req_size, GFP_ATOMIC);
+	req = kzalloc(req_size, GFP_KERNEL);
 	req->num_adapters = num_adapters;
 	req->adapter_offset = 0;
 
@@ -534,12 +534,12 @@ static int initialize_adapters(struct virtio_dxgkrnl *vp)
 
 	resp_size = sizeof(struct virtio_dxgkrnl_enum_adapters_resp) +
 		    sizeof(__s64) * num_adapters;
-	resp = kzalloc(resp_size, GFP_ATOMIC);
+	resp = kzalloc(resp_size, GFP_KERNEL);
 
 	sg_init_one(&resp_sg, resp, resp_size);
 	sgs[1] = &resp_sg;
 
-	err = virtqueue_add_sgs(vp->setup_vq, sgs, 1, 1, vp, GFP_ATOMIC);
+	err = virtqueue_add_sgs(vp->setup_vq, sgs, 1, 1, vp, GFP_KERNEL);
 	if (err) {
 		dev_err(&vp->vdev->dev, "%s: failed to add output: %d\n",
 			__func__, err);
