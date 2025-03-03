@@ -14,11 +14,13 @@ load(
 
 def kleaf_test(
         name,
+        extras,
         **kwargs):
     """Define tests on Kleaf using virtual device as a baseline.
 
     Args:
         name: Name of the test
+        extras: extra tests
         **kwargs: additional kwargs common to all rules.
     """
 
@@ -135,7 +137,7 @@ def kleaf_test(
             name + "_ddk_submodule_linux_include_in_top_level_test",
             name + "_kernel_boot_images_outs_contains_ramdisk_test",
             name + "_ddk_genfiles_test",
-        ],
+        ] + extras,
         **kwargs
     )
 
