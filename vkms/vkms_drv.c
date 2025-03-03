@@ -26,9 +26,10 @@
 #include <drm/drm_gem_shmem_helper.h>
 #include <drm/drm_vblank.h>
 
-#include "vkms_config.h"
-#include "vkms_configfs.h"
 #include "vkms_drv.h"
+
+#include <drm/drm_print.h>
+#include <drm/drm_debugfs.h>
 
 #define DRIVER_NAME	"vkms"
 #define DRIVER_DESC	"Virtual Kernel Mode Setting"
@@ -79,6 +80,23 @@ static void vkms_atomic_commit_tail(struct drm_atomic_state *old_state)
 
 	drm_atomic_helper_cleanup_planes(dev, old_state);
 }
+
+static int vkms_config_show(struct seq_file *m, void *data)
+{
+	struct drm_debugfs_entry *entry = m->private;
+	struct drm_device *dev = entry->dev;
+	struct vkms_device *vkmsdev = drm_device_to_vkms_device(dev);
+
+	seq_printf(m, "writeback=%d\n", vkmsdev->config->writeback);
+	seq_printf(m, "cursor=%d\n", vkmsdev->config->cursor);
+	seq_printf(m, "overlay=%d\n", vkmsdev->config->overlay);
+
+	return 0;
+}
+
+static const struct drm_debugfs_info vkms_config_debugfs_list[] = {
+	{ "vkms_config", vkms_config_show, 0 },
+};
 
 static const struct drm_driver vkms_driver = {
 	.driver_features	= DRIVER_MODESET | DRIVER_ATOMIC | DRIVER_GEM,
@@ -147,15 +165,13 @@ static int vkms_modeset_init(struct vkms_device *vkmsdev)
 	return vkms_output_init(vkmsdev);
 }
 
-int vkms_create(struct vkms_config *config)
+static int vkms_create(struct vkms_config *config)
 {
 	int ret;
 	struct platform_device *pdev;
 	struct vkms_device *vkms_device;
-	const char *dev_name;
 
-	dev_name = vkms_config_get_device_name(config);
-	pdev = platform_device_register_simple(dev_name, -1, NULL, 0);
+	pdev = platform_device_register_simple(DRIVER_NAME, -1, NULL, 0);
 	if (IS_ERR(pdev))
 		return PTR_ERR(pdev);
 
@@ -182,8 +198,7 @@ int vkms_create(struct vkms_config *config)
 		goto out_devres;
 	}
 
-	ret = drm_vblank_init(&vkms_device->drm,
-			      vkms_config_get_num_crtcs(config));
+	ret = drm_vblank_init(&vkms_device->drm, 1);
 	if (ret) {
 		DRM_ERROR("Failed to vblank\n");
 		goto out_devres;
@@ -193,7 +208,8 @@ int vkms_create(struct vkms_config *config)
 	if (ret)
 		goto out_devres;
 
-	vkms_config_register_debugfs(vkms_device);
+	drm_debugfs_add_files(&vkms_device->drm, vkms_config_debugfs_list,
+			      ARRAY_SIZE(vkms_config_debugfs_list));
 
 	ret = drm_dev_register(&vkms_device->drm, 0);
 	if (ret)
@@ -215,31 +231,24 @@ static int __init vkms_init(void)
 	int ret;
 	struct vkms_config *config;
 
-	config = vkms_config_default_create(enable_cursor, enable_writeback, enable_overlay);
-	if (IS_ERR(config))
-		return PTR_ERR(config);
-
-	ret = vkms_create(config);
-	if (ret)
-		goto err_free_config;
-
-	ret = vkms_configfs_register();
-	if (ret)
-		goto err_free_vkms;
+	config = kmalloc(sizeof(*config), GFP_KERNEL);
+	if (!config)
+		return -ENOMEM;
 
 	default_config = config;
 
-	return 0;
+	config->cursor = enable_cursor;
+	config->writeback = enable_writeback;
+	config->overlay = enable_overlay;
 
-err_free_vkms:
-	vkms_destroy(config);
-err_free_config:
-	vkms_config_destroy(config);
+	ret = vkms_create(config);
+	if (ret)
+		kfree(config);
 
 	return ret;
 }
 
-void vkms_destroy(struct vkms_config *config)
+static void vkms_destroy(struct vkms_config *config)
 {
 	struct platform_device *pdev;
 
@@ -260,12 +269,10 @@ void vkms_destroy(struct vkms_config *config)
 
 static void __exit vkms_exit(void)
 {
-	if (!default_config)
-		return;
+	if (default_config->dev)
+		vkms_destroy(default_config);
 
-	vkms_configfs_unregister();
-	vkms_destroy(default_config);
-	vkms_config_destroy(default_config);
+	kfree(default_config);
 }
 
 module_init(vkms_init);
