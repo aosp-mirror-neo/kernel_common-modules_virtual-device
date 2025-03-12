@@ -40,7 +40,7 @@ static int init_message(struct dxgvmbusmsg *msg, struct dxgadapter *adapter,
 		msg->hdr = (void *)msg->msg_on_stack;
 		memset(msg->hdr, 0, size);
 	} else {
-		msg->hdr = kzalloc(size, GFP_ATOMIC);
+		msg->hdr = kzalloc(size, GFP_KERNEL);
 		if (msg->hdr == NULL)
 			return -ENOMEM;
 	}
@@ -73,7 +73,7 @@ static int init_message_res(struct dxgvmbusmsgres *msg,
 	msg->size = size;
 	msg->res_size += (result_size + 7) & ~7;
 	size += msg->res_size;
-	msg->hdr = kzalloc(size, GFP_ATOMIC);
+	msg->hdr = kzalloc(size, GFP_KERNEL);
 	if (msg->hdr == NULL) {
 		pr_err("Failed to allocate VM bus message: %d", size);
 		return -ENOMEM;
@@ -189,7 +189,7 @@ dxgvmb_send_sync_msg_ntstatus(struct dxgvmbuschannel *channel,
 	struct ntstatus *status;
 	int ret;
 
-	status = kzalloc(sizeof(struct ntstatus), GFP_ATOMIC);
+	status = kzalloc(sizeof(struct ntstatus), GFP_KERNEL);
 
 	ret = dxgvmb_send_sync_msg(channel, command, cmd_size,
 				   status, sizeof(struct ntstatus));
