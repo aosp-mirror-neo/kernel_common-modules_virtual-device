@@ -5859,6 +5859,9 @@ static int dxgk_ioctl(struct file *f, unsigned int p1, unsigned long p2)
 		return -ENOTTY;
 	}
 	status = ioctls[code].ioctl_callback(process, (void *__user)p2);
+	if (status < 0) {
+		pr_err("IOCTL code: %d failed with status: %d", code, status);
+	}
 	return status;
 }
 
