@@ -5824,6 +5824,111 @@ cleanup:
 
 	return ret;
 }
+
+
+static int dxgk_createcompositiontargets(struct dxgprocess *process, void *__user inargs)
+{
+	struct d3dkmt_createcompositiontargets args;
+	u64 *target_memory_nthandles = NULL;
+	int max_num_files_to_put = 0;
+	struct file **files_to_put = NULL;
+	__u32 *target_fds = NULL;
+	__u32 target_idx = 0;
+	int ret = 0;
+	int i = 0;
+
+	// copy args from user space to kernel space
+	ret = copy_from_user(&args, inargs, sizeof(args));
+
+	if (ret) {
+		pr_err("%s failed to copy input args", __func__);
+		ret = -EINVAL;
+		goto cleanup;
+	}
+
+	if (args.target_memory_fd_count == 0) {
+		dev_dbg(dxgglobaldev, "Too few target memory fd: %d",
+			args.target_memory_fd_count);
+		ret = -EINVAL;
+		goto cleanup;
+	}
+
+	// allocate space to copy the guest target fds from user to kernel space.
+	target_fds = vzalloc(sizeof(__s32) * args.target_memory_fd_count);
+	if (target_fds == NULL) {
+		ret = -ENOMEM;
+		goto cleanup;
+	}
+
+    // We need to fput the files we fget. The max number we'll have is the
+    // number of targets.
+    max_num_files_to_put = args.target_memory_fd_count;
+    files_to_put = vzalloc(sizeof(struct file *) * max_num_files_to_put);
+	if (files_to_put == NULL) {
+		ret = -ENOMEM;
+		goto cleanup;
+	}
+
+	// copy guest fds to kernel space.
+	ret = copy_from_user(target_fds, args.target_memory_fd,
+			     sizeof(__s32) * args.target_memory_fd_count);
+
+	if (ret) {
+		pr_err("%s failed to copy target memory fds", __func__);
+		ret = -EINVAL;
+		goto cleanup;
+	}
+
+	// allocate space for host memory handles for targets.
+	target_memory_nthandles =
+		vzalloc(args.target_memory_fd_count * sizeof(u64));
+
+	if (!target_memory_nthandles) {
+		pr_err("%s failed to allocate target memory nthandles",
+		       __func__);
+		ret = -ENOMEM;
+		goto cleanup;
+	}
+
+	// get handles for target memory file desccriptor.
+	for (target_idx = 0; target_idx < args.target_memory_fd_count;
+	     target_idx++) {
+          ret = get_resource_host_nthandle(target_fds[target_idx],
+                                           &target_memory_nthandles[target_idx],
+                                           &files_to_put[target_idx]);
+          if (ret) {
+            pr_err("%s failed to host nthandle for fd %x", __func__,
+                   target_fds[target_idx]);
+            ret = -EINVAL;
+            goto cleanup;
+          }
+	}
+
+	ret = dxgvmb_send_create_composition_targets(process, &args,
+					   target_memory_nthandles);
+
+cleanup:
+	dev_dbg(dxgglobaldev, "ioctl:%s %s %d", errorstr(ret), __func__, ret);
+	// free memory allocated for target host handles.
+	if (target_memory_nthandles) {
+		vfree(target_memory_nthandles);
+	}
+
+	// free memory allocated for the target guest fds.
+	if (target_fds) {
+		vfree(target_fds);
+	}
+
+	if (files_to_put) {
+		for (i = 0; i < max_num_files_to_put; i++) {
+			if (files_to_put[i] != NULL)
+				fput(files_to_put[i]);
+		}
+		vfree(files_to_put);
+	}
+
+	return ret;
+}
 /*
  * IOCTL processing
  * The driver IOCTLs return
@@ -6026,4 +6131,5 @@ void init_ioctls(void)
 	SET_IOCTL(/*0x47 */ dxgk_signal_sync_object_from_sync_file,
 		  LX_DXSIGNALSYNCHRONIZATIONOBJECTFROMSYNCFILE);
 	SET_IOCTL(/*0x48 */ dxgk_presentvirtual2, LX_DXPRESENTVIRTUAL2);
+	SET_IOCTL(/*0x49 */ dxgk_createcompositiontargets, LX_DXCREATECOMPOSITIONTARGETS);
 }
