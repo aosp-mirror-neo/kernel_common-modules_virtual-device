@@ -7,6 +7,8 @@
 #include <linux/types.h>
 #include <linux/xarray.h>
 
+#include <drm/drm_connector.h>
+
 #include "vkms_drv.h"
 
 /**
@@ -33,19 +35,35 @@ struct vkms_config {
  *
  * @link: Link to the others planes in vkms_config
  * @config: The vkms_config this plane belongs to
+ * @name: Name of the plane
  * @type: Type of the plane. The creator of configuration needs to ensures that
  *        at least one primary plane is present.
  * @possible_crtcs: Array of CRTCs that can be used with this plane
+ * @default_rotation: Default rotation that should be used by this plane
+ * @supported_rotation: Rotation that this plane will support
  * @plane: Internal usage. This pointer should never be considered as valid.
  *         It can be used to store a temporary reference to a VKMS plane during
  *         device creation. This pointer is not managed by the configuration and
  *         must be managed by other means.
+ * @default_color_encoding: Default color encoding that should be used by this plane
+ * @supported_color_encoding: Color encoding that this plane will support
+ * @default_color_range: Default color range that should be used by this plane
+ * @supported_color_range: Color range that this plane will support
  */
 struct vkms_config_plane {
 	struct list_head link;
 	struct vkms_config *config;
 
+	const char *name;
 	enum drm_plane_type type;
+	unsigned int default_rotation;
+	unsigned int supported_rotations;
+	enum drm_color_encoding default_color_encoding;
+	unsigned int supported_color_encoding;
+	enum drm_color_range default_color_range;
+	unsigned int supported_color_range;
+	u32 *supported_formats;
+	unsigned int supported_formats_count;
 	struct xarray possible_crtcs;
 
 	/* Internal usage */
@@ -67,6 +85,7 @@ struct vkms_config_crtc {
 	struct list_head link;
 	struct vkms_config *config;
 
+	const char *name;
 	bool writeback;
 
 	/* Internal usage */
@@ -88,7 +107,9 @@ struct vkms_config_encoder {
 	struct list_head link;
 	struct vkms_config *config;
 
+	const char *name;
 	struct xarray possible_crtcs;
+	char type;
 
 	/* Internal usage */
 	struct drm_encoder *encoder;
@@ -99,6 +120,7 @@ struct vkms_config_encoder {
  *
  * @link: Link to the others connector in vkms_config
  * @config: The vkms_config this connector belongs to
+ * @status: Status (connected, disconnected...) of the connector
  * @possible_encoders: Array of encoders that can be used with this connector
  * @connector: Internal usage. This pointer should never be considered as valid.
  *             It can be used to store a temporary reference to a VKMS connector
@@ -109,6 +131,10 @@ struct vkms_config_connector {
 	struct list_head link;
 	struct vkms_config *config;
 
+	int type;
+	enum drm_connector_status status;
+	u8 *edid;
+	unsigned int edid_len;
 	struct xarray possible_encoders;
 
 	/* Internal usage */
@@ -207,6 +233,32 @@ struct vkms_config *vkms_config_default_create(bool enable_cursor,
  */
 void vkms_config_destroy(struct vkms_config *config);
 
+static inline const u8 *
+vkms_config_connector_get_edid(const struct vkms_config_connector *connector_cfg, int *len)
+{
+	*len = connector_cfg->edid_len;
+	return connector_cfg->edid;
+}
+
+static inline void
+vkms_config_connector_set_edid(struct vkms_config_connector *connector_cfg, const u8 *edid, unsigned int len)
+{
+	if (len) {
+		connector_cfg->edid = krealloc(connector_cfg->edid, len, GFP_KERNEL);
+		if (connector_cfg->edid) {
+			memcpy(connector_cfg->edid, edid, len);
+			connector_cfg->edid_len = len;
+		} else {
+			kfree(connector_cfg->edid);
+			connector_cfg->edid_len = 0;
+		}
+	} else if (connector_cfg->edid) {
+		kfree(connector_cfg->edid);
+		connector_cfg->edid = NULL;
+		connector_cfg->edid_len = len;
+	}
+}
+
 /**
  * vkms_config_get_device_name() - Return the name of the device
  * @config: Configuration to get the device name from
@@ -283,6 +335,241 @@ vkms_config_plane_set_type(struct vkms_config_plane *plane_cfg,
 {
 	plane_cfg->type = type;
 }
+
+/**
+ * vkms_config_connector_get_type() - Return the connector type
+ * @connector_cfg: Connector to get the type from
+ */
+static inline int
+vkms_config_connector_get_type(struct vkms_config_connector *connector_cfg)
+{
+	return connector_cfg->type;
+}
+
+/**
+ * vkms_config_connector_set_type() - Set the connector type
+ * @connector_cfg: Connector to set the type to
+ * @type: New connector type
+ */
+static inline void
+vkms_config_connector_set_type(struct vkms_config_connector *connector_cfg,
+			   int type)
+{
+	connector_cfg->type = type;
+}
+
+static inline unsigned int
+vkms_config_plane_get_default_rotation(struct vkms_config_plane *plane_cfg)
+{
+	return plane_cfg->default_rotation;
+}
+
+static inline void
+vkms_config_plane_set_default_rotation(struct vkms_config_plane *plane_cfg, unsigned int default_rotation)
+{
+	plane_cfg->default_rotation = default_rotation;
+}
+
+static inline unsigned int
+vkms_config_plane_get_supported_rotations(struct vkms_config_plane *plane_cfg)
+{
+	return plane_cfg->supported_rotations;
+}
+
+static inline void
+vkms_config_plane_set_supported_rotations(struct vkms_config_plane *plane_cfg, unsigned int supported_rotations)
+{
+	plane_cfg->supported_rotations = supported_rotations;
+}
+
+static inline enum drm_color_encoding
+vkms_config_plane_get_default_color_encoding(struct vkms_config_plane *plane_cfg)
+{
+	return plane_cfg->default_color_encoding;
+}
+
+static inline void
+vkms_config_plane_set_default_color_encoding(struct vkms_config_plane *plane_cfg, enum drm_color_encoding default_color_encoding)
+{
+	plane_cfg->default_color_encoding = default_color_encoding;
+}
+
+static inline unsigned int
+vkms_config_plane_get_supported_color_encoding(struct vkms_config_plane *plane_cfg)
+{
+	return plane_cfg->supported_color_encoding;
+}
+
+static inline void
+vkms_config_plane_set_supported_color_encoding(struct vkms_config_plane *plane_cfg, unsigned int supported_color_encoding)
+{
+	plane_cfg->supported_color_encoding = supported_color_encoding;
+}
+
+
+static inline enum drm_color_range
+vkms_config_plane_get_default_color_range(struct vkms_config_plane *plane_cfg)
+{
+	return plane_cfg->default_color_range;
+}
+
+static inline void
+vkms_config_plane_set_default_color_range(struct vkms_config_plane *plane_cfg, enum drm_color_range default_color_range)
+{
+	plane_cfg->default_color_range = default_color_range;
+}
+
+static inline unsigned int
+vkms_config_plane_get_supported_color_range(struct vkms_config_plane *plane_cfg)
+{
+	return plane_cfg->supported_color_range;
+}
+
+static inline void
+vkms_config_plane_set_supported_color_range(struct vkms_config_plane *plane_cfg, unsigned int supported_color_range)
+{
+	plane_cfg->supported_color_range = supported_color_range;
+}
+
+/**
+ * vkms_config_encoder_get_type() - Return the encoder type
+ * @encoder_cfg: Encoder to get the type from
+ */
+static inline char
+vkms_config_encoder_get_type(struct vkms_config_encoder *encoder_cfg)
+{
+	return encoder_cfg->type;
+}
+
+/**
+ * vkms_config_encoder_set_type() - Set the encoder type
+ * @encoder_cfg: Encoder to set the type to
+ * @type: New encoder type
+ */
+static inline void
+vkms_config_encoder_set_type(struct vkms_config_encoder *encoder_cfg, char type)
+{
+	encoder_cfg->type = type;
+}
+
+/**
+ * vkms_config_plane_set_name() - Set the plane name
+ * @plane_cfg: Plane to set the name to
+ * @name: New plane name. The name is copied.
+ */
+static inline void
+vkms_config_plane_set_name(struct vkms_config_plane *plane_cfg,
+			   const char *name)
+{
+	if (plane_cfg->name)
+		kfree_const(plane_cfg->name);
+	plane_cfg->name = kstrdup_const(name, GFP_KERNEL);
+}
+
+/**
+ * vkms_config_plane_get_name - Get the plane name
+ * @plane_cfg: Plane to get the name from
+ */
+static inline const char *
+vkms_config_plane_get_name(struct vkms_config_plane *plane_cfg)
+{
+	return plane_cfg->name;
+}
+
+/**
+ * vkms_config_crtc_set_name() - Set the CRTC name
+ * @crtc_cfg: CRTC to set the name to
+ * @name: New CRTC name. The name is copied.
+ */
+static inline void
+vkms_config_crtc_set_name(struct vkms_config_crtc *crtc_cfg,
+			   const char *name)
+{
+	if (crtc_cfg->name)
+		kfree_const(crtc_cfg->name);
+	crtc_cfg->name = kstrdup_const(name, GFP_KERNEL);
+}
+
+/**
+ * vkms_config_crtc_get_name - Get the CRTC name
+ * @crtc_cfg: Plane to get the name from
+ */
+static inline const char *
+vkms_config_crtc_get_name(struct vkms_config_crtc *crtc_cfg)
+{
+	return crtc_cfg->name;
+}
+
+/**
+ * vkms_config_encoder_get_name - Get the encoder name
+ * @encoder_cfg: Encoder to get the name from
+ */
+static inline const char *
+vkms_config_encoder_get_name(struct vkms_config_encoder *encoder_cfg)
+{
+	return encoder_cfg->name;
+}
+
+/**
+ * vkms_config_encoder_set_name() - Set the encoder name
+ * @encoder_cfg: Encoder to set the name to
+ * @name: New encoder name. The name is copied.
+ */
+static inline void
+vkms_config_encoder_set_name(struct vkms_config_encoder *encoder_cfg,
+			   const char *name)
+{
+	if (encoder_cfg->name)
+		kfree_const(encoder_cfg->name);
+	encoder_cfg->name = kstrdup_const(name, GFP_KERNEL);
+}
+
+static inline u32 *
+vkms_config_plane_get_supported_formats(struct vkms_config_plane *plane_cfg)
+{
+	return plane_cfg->supported_formats;
+}
+
+static inline unsigned int
+vkms_config_plane_get_supported_formats_count(struct vkms_config_plane *plane_cfg)
+{
+	return plane_cfg->supported_formats_count;
+}
+
+/** vkms_config_plane_add_format - Add a format to the list of supported format of a plane
+ *
+ * The passed drm_format can already be present in the list. This may fail if the allocation of a
+ * bigger array fails.
+ *
+ * @plane_cfg: Plane to add the format to
+ * @drm_format: Format to add to this plane
+ *
+ * Returns: 0 on success, -ENOMEM if array allocation fails, -EINVAL if the format is not supported
+ * by VKMS
+ */
+int __must_check vkms_config_plane_add_format(struct vkms_config_plane *plane_cfg, u32 drm_format);
+
+/**
+ * vkms_config_plane_add_all_formats - Helper to quickly add all the supported formats
+ * @plane_cfg: Plane to add the formats to
+ *
+ * Returns: 0 on success, -ENOMEM if array allocation fails, -EINVAL if the format is not supported
+ * by VKMS
+ */
+int __must_check vkms_config_plane_add_all_formats(struct vkms_config_plane *plane_cfg);
+
+/**
+ * vkms_config_plane_remove_format - Remove a specific format from a plane
+ * @plane_cfg: Plane to remove the format to
+ * @drm_format: Format to remove
+ */
+void vkms_config_plane_remove_format(struct vkms_config_plane *plane_cfg, u32 drm_format);
+
+/**
+ * vkms_config_plane_remove_all_formats - Remove all formast from a plane
+ * @plane_cfg: Plane to remove the formats from
+ */
+void vkms_config_plane_remove_all_formats(struct vkms_config_plane *plane_cfg);
 
 /**
  * vkms_config_plane_attach_crtc - Attach a plane to a CRTC
@@ -433,5 +720,27 @@ int __must_check vkms_config_connector_attach_encoder(struct vkms_config_connect
  */
 void vkms_config_connector_detach_encoder(struct vkms_config_connector *connector_cfg,
 					  struct vkms_config_encoder *encoder_cfg);
+
+/**
+ * vkms_config_connector_get_status() - Return the status of the connector
+ * @connector_cfg: Connector to get the status from
+ */
+static inline enum drm_connector_status
+vkms_config_connector_get_status(struct vkms_config_connector *connector_cfg)
+{
+	return connector_cfg->status;
+}
+
+/**
+ * vkms_config_crtc_set_writeback() - If a writeback connector will be created
+ * @crtc_cfg: Target CRTC
+ * @writeback: Enable or disable the writeback connector
+ */
+static inline void
+vkms_config_connector_set_status(struct vkms_config_connector *connector_cfg,
+				 enum drm_connector_status status)
+{
+	connector_cfg->status = status;
+}
 
 #endif /* _VKMS_CONFIG_H_ */
