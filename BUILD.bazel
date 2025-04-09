@@ -761,6 +761,7 @@ kernel_build(
     ] + _VIRT_COMMON_MODULES + _VIRT_AARCH64_MODULES + [
         # keep sorted
         "cctrng.ko",
+        "font.ko",
         "open-dice.ko",
     ],
     post_defconfig_fragments = [
