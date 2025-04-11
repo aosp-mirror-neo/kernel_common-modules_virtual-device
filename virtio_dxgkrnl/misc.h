@@ -74,6 +74,7 @@ enum dxglockstate {
 #define	STATUS_NO_MEMORY				((int)(0xC0000017L))
 #define	STATUS_OBJECT_NAME_COLLISION			((int)(0xC0000035L))
 #define STATUS_OBJECT_NAME_NOT_FOUND			((int)(0xC0000034L))
+#define STATUS_CANCELLED			    ((int)(0xC0000120L))
 
 
 #define NT_SUCCESS(status)				(status.v >= 0)
