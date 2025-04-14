@@ -133,6 +133,8 @@ int ntstatus2int(struct ntstatus status)
 		return -EPROTOTYPE;
 	case STATUS_NOT_IMPLEMENTED:
 		return -EPERM;
+	case STATUS_CANCELLED:
+		return -ECANCELED;
 	default:
 		return -EINVAL;
 	}
