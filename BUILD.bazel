@@ -137,6 +137,9 @@ ddk_headers(
 
 _VIRT_COMMON_MODULES = [
     # keep sorted
+    "btintel.ko",
+    "btrtl.ko",
+    "btusb.ko",
     "cfg80211.ko",
     "dummy-cpufreq.ko",
     "dummy_hcd.ko",
