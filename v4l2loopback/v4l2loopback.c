@@ -47,6 +47,10 @@
 #define VFL_TYPE_VIDEO VFL_TYPE_GRABBER
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0)
+#define del_timer_sync(t) timer_delete_sync(t)
+#endif
+
 #define V4L2LOOPBACK_VERSION_CODE                                              \
 	KERNEL_VERSION(V4L2LOOPBACK_VERSION_MAJOR, V4L2LOOPBACK_VERSION_MINOR, \
 		       V4L2LOOPBACK_VERSION_BUGFIX)
