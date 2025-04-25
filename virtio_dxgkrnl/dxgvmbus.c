@@ -799,6 +799,61 @@ cleanup:
 	return ret;
 }
 
+int dxgvmb_send_create_composition_targets(struct dxgprocess *process,
+				 struct d3dkmt_createcompositiontargets *args,
+				 u64 *target_memory_nthandle)
+{
+	struct dxgkvmb_command_createcompositiontargets *command;
+	int ret;
+	struct dxgvmbusmsg msg = { .hdr = NULL };
+	u32 target_fd_size = args->target_memory_fd_count * sizeof(u64);
+	u32 cmd_size = sizeof(struct dxgkvmb_command_createcompositiontargets) +
+		       target_fd_size + args->private_data_size;
+	u8 *write_pos;
+	ret = init_message(&msg, NULL, process, cmd_size);
+	if (ret)
+		return ret;
+	command = (void *)msg.msg;
+
+	command_vm_to_host_init2(&command->hdr, DXGK_VMBCOMMAND_CREATECOMPOSITIONTARGETS,
+				 process->host_handle);
+	command->target_memory_nthandle_count = args->target_memory_fd_count;
+	command->private_data_size = args->private_data_size;
+
+	// copy target fds
+	write_pos = (u8 *)(&command[1]);
+	if (target_fd_size) {
+		memcpy(write_pos, target_memory_nthandle, target_fd_size);
+	}
+
+	// copy private data
+	write_pos += target_fd_size;
+	if (args->private_data_size) {
+		ret = copy_from_user(write_pos, args->private_data,
+				     args->private_data_size);
+		if (ret) {
+			pr_err("%s failed to copy user data", __func__);
+			ret = -EINVAL;
+			goto cleanup;
+		}
+	}
+
+	ret = dxgglobal_acquire_channel_lock();
+	if (ret < 0)
+		goto cleanup;
+
+	ret = dxgvmb_send_sync_msg_ntstatus(dxgglobal_get_dxgvmbuschannel(),
+					    msg.hdr, msg.size);
+
+	dxgglobal_release_channel_lock();
+
+cleanup:
+	free_message(&msg, process);
+	if (ret)
+		dev_dbg(dxgglobaldev, "err: %s %d", __func__, ret);
+	return ret;
+}
+
 /*
  * Virtual GPU messages to the host
  */
