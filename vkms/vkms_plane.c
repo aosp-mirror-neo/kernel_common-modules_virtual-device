@@ -208,5 +208,7 @@ struct vkms_plane *vkms_plane_init(struct vkms_device *vkmsdev,
 					  config->default_color_encoding,
 					  config->default_color_range);
 
+	vkms_initialize_colorops(&plane->base);
+
 	return plane;
 }
