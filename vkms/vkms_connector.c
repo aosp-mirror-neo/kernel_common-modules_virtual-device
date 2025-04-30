@@ -11,11 +11,25 @@
 static enum drm_connector_status vkms_connector_detect(struct drm_connector *connector,
 						       bool force)
 {
+	struct drm_device *dev = connector->dev;
+	struct vkms_device *vkmsdev = drm_device_to_vkms_device(dev);
 	struct vkms_connector *vkms_connector;
 	enum drm_connector_status status;
+	struct vkms_config_connector *connector_cfg;
 
 	vkms_connector = drm_connector_to_vkms_connector(connector);
-	status = vkms_config_connector_get_status(vkms_connector->connector_cfg);
+
+	/*
+	 * The connector configuration might not exist if its configfs directory
+	 * was deleted. Therefore, use the configuration if present or keep the
+	 * current status if we can not access it anymore.
+	 */
+	status = connector->status;
+
+	vkms_config_for_each_connector(vkmsdev->config, connector_cfg) {
+		if (connector_cfg->connector == vkms_connector)
+			status = vkms_config_connector_get_status(connector_cfg);
+	}
 
 	return status;
 }
@@ -46,8 +60,13 @@ static int vkms_conn_get_modes(struct drm_connector *connector)
 	const struct drm_edid *drm_edid = NULL;
 	int count;
 	struct vkms_config_connector *context = NULL;
-
-	context = vkms_connector->connector_cfg;
+	struct drm_device *dev = connector->dev;
+	struct vkms_device *vkmsdev = drm_device_to_vkms_device(dev);
+struct vkms_config_connector *connector_cfg;
+	vkms_config_for_each_connector(vkmsdev->config, connector_cfg) {
+		if (connector_cfg->connector == vkms_connector)
+			context = connector_cfg;
+	}
 	if (context)
 		drm_edid = drm_edid_read_custom(connector, vkms_connector_read_block, context);
 
@@ -81,8 +100,7 @@ static const struct drm_connector_helper_funcs vkms_conn_helper_funcs = {
 	.best_encoder = vkms_conn_best_encoder,
 };
 
-struct vkms_connector *vkms_connector_init(struct vkms_device *vkmsdev,
-					   struct vkms_config_connector *connector_cfg)
+struct vkms_connector *vkms_connector_init(struct vkms_device *vkmsdev, struct vkms_config_connector *connector_cfg)
 {
 	struct drm_device *dev = &vkmsdev->drm;
 	struct vkms_connector *connector;
@@ -91,8 +109,6 @@ struct vkms_connector *vkms_connector_init(struct vkms_device *vkmsdev,
 	connector = drmm_kzalloc(dev, sizeof(*connector), GFP_KERNEL);
 	if (!connector)
 		return ERR_PTR(-ENOMEM);
-
-	connector->connector_cfg = connector_cfg;
 
 	ret = drmm_connector_init(dev, &connector->base, &vkms_connector_funcs,
 				  connector_cfg->type, NULL);

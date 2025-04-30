@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
+#include "drm/drm_connector.h"
+#include <linux/cleanup.h>
 #include <linux/configfs.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
@@ -140,9 +142,8 @@ static ssize_t crtc_writeback_show(struct config_item *item, char *page)
 
 	crtc = crtc_item_to_vkms_configfs_crtc(item);
 
-	mutex_lock(&crtc->dev->lock);
-	writeback = vkms_config_crtc_get_writeback(crtc->config);
-	mutex_unlock(&crtc->dev->lock);
+	scoped_guard(mutex, &crtc->dev->lock)
+		writeback = vkms_config_crtc_get_writeback(crtc->config);
 
 	return sprintf(page, "%d\n", writeback);
 }
@@ -158,16 +159,12 @@ static ssize_t crtc_writeback_store(struct config_item *item, const char *page,
 	if (kstrtobool(page, &writeback))
 		return -EINVAL;
 
-	mutex_lock(&crtc->dev->lock);
+	scoped_guard(mutex, &crtc->dev->lock) {
+		if (crtc->dev->enabled)
+			return -EBUSY;
 
-	if (crtc->dev->enabled) {
-		mutex_unlock(&crtc->dev->lock);
-		return -EPERM;
+		vkms_config_crtc_set_writeback(crtc->config, writeback);
 	}
-
-	vkms_config_crtc_set_writeback(crtc->config, writeback);
-
-	mutex_unlock(&crtc->dev->lock);
 
 	return (ssize_t)count;
 }
@@ -187,10 +184,10 @@ static void crtc_release(struct config_item *item)
 	crtc = crtc_item_to_vkms_configfs_crtc(item);
 	lock = &crtc->dev->lock;
 
-	mutex_lock(lock);
-	vkms_config_destroy_crtc(crtc->dev->config, crtc->config);
-	kfree(crtc);
-	mutex_unlock(lock);
+	scoped_guard(mutex, lock) {
+		vkms_config_destroy_crtc(crtc->dev->config, crtc->config);
+		kfree(crtc);
+	}
 }
 
 static struct configfs_item_operations crtc_item_operations = {
@@ -208,42 +205,29 @@ static struct config_group *make_crtc_group(struct config_group *group,
 {
 	struct vkms_configfs_device *dev;
 	struct vkms_configfs_crtc *crtc;
-	int ret;
 
 	dev = child_group_to_vkms_configfs_device(group);
 
-	mutex_lock(&dev->lock);
+	scoped_guard(mutex, &dev->lock) {
+		if (dev->enabled)
+			return ERR_PTR(-EBUSY);
 
-	if (dev->enabled) {
-		ret = -EINVAL;
-		goto err_unlock;
+		crtc = kzalloc(sizeof(*crtc), GFP_KERNEL);
+		if (!crtc)
+			return ERR_PTR(-ENOMEM);
+
+		crtc->dev = dev;
+
+		crtc->config = vkms_config_create_crtc(dev->config);
+		if (IS_ERR(crtc->config)) {
+			kfree(crtc);
+			return ERR_CAST(crtc->config);
+		}
+
+		config_group_init_type_name(&crtc->group, name, &crtc_item_type);
 	}
-
-	crtc = kzalloc(sizeof(*crtc), GFP_KERNEL);
-	if (!crtc) {
-		ret = -ENOMEM;
-		goto err_unlock;
-	}
-
-	crtc->dev = dev;
-
-	crtc->config = vkms_config_create_crtc(dev->config);
-	if (IS_ERR(crtc->config)) {
-		ret = PTR_ERR(crtc->config);
-		goto err_free;
-	}
-
-	config_group_init_type_name(&crtc->group, name, &crtc_item_type);
-
-	mutex_unlock(&dev->lock);
 
 	return &crtc->group;
-
-err_free:
-	kfree(crtc);
-err_unlock:
-	mutex_unlock(&dev->lock);
-	return ERR_PTR(ret);
 }
 
 static struct configfs_group_operations crtcs_group_operations = {
@@ -268,15 +252,12 @@ static int plane_possible_crtcs_allow_link(struct config_item *src,
 	plane = plane_possible_crtcs_item_to_vkms_configfs_plane(src);
 	crtc = crtc_item_to_vkms_configfs_crtc(target);
 
-	mutex_lock(&plane->dev->lock);
+	scoped_guard(mutex, &plane->dev->lock) {
+		if (plane->dev->enabled)
+			return -EBUSY;
 
-	if (plane->dev->enabled) {
-		mutex_unlock(&plane->dev->lock);
-		return -EPERM;
+		ret = vkms_config_plane_attach_crtc(plane->config, crtc->config);
 	}
-
-	ret = vkms_config_plane_attach_crtc(plane->config, crtc->config);
-	mutex_unlock(&plane->dev->lock);
 
 	return ret;
 }
@@ -290,9 +271,8 @@ static void plane_possible_crtcs_drop_link(struct config_item *src,
 	plane = plane_possible_crtcs_item_to_vkms_configfs_plane(src);
 	crtc = crtc_item_to_vkms_configfs_crtc(target);
 
-	mutex_lock(&plane->dev->lock);
-	vkms_config_plane_detach_crtc(plane->config, crtc->config);
-	mutex_unlock(&plane->dev->lock);
+	scoped_guard(mutex, &plane->dev->lock)
+		vkms_config_plane_detach_crtc(plane->config, crtc->config);
 }
 
 static struct configfs_item_operations plane_possible_crtcs_item_operations = {
@@ -312,9 +292,8 @@ static ssize_t plane_type_show(struct config_item *item, char *page)
 
 	plane = plane_item_to_vkms_configfs_plane(item);
 
-	mutex_lock(&plane->dev->lock);
-	type = vkms_config_plane_get_type(plane->config);
-	mutex_unlock(&plane->dev->lock);
+	scoped_guard(mutex, &plane->dev->lock)
+		type = vkms_config_plane_get_type(plane->config);
 
 	return sprintf(page, "%u", type);
 }
@@ -334,16 +313,12 @@ static ssize_t plane_type_store(struct config_item *item, const char *page,
 	    type != DRM_PLANE_TYPE_CURSOR)
 		return -EINVAL;
 
-	mutex_lock(&plane->dev->lock);
+	scoped_guard(mutex, &plane->dev->lock) {
+		if (plane->dev->enabled)
+			return -EBUSY;
 
-	if (plane->dev->enabled) {
-		mutex_unlock(&plane->dev->lock);
-		return -EPERM;
+		vkms_config_plane_set_type(plane->config, type);
 	}
-
-	vkms_config_plane_set_type(plane->config, type);
-
-	mutex_unlock(&plane->dev->lock);
 
 	return (ssize_t)count;
 }
@@ -728,10 +703,10 @@ static void plane_release(struct config_item *item)
 	plane = plane_item_to_vkms_configfs_plane(item);
 	lock = &plane->dev->lock;
 
-	mutex_lock(lock);
-	vkms_config_destroy_plane(plane->config);
-	kfree(plane);
-	mutex_unlock(lock);
+	scoped_guard(mutex, lock) {
+		vkms_config_destroy_plane(plane->config);
+		kfree(plane);
+	}
 }
 
 static struct configfs_item_operations plane_item_operations = {
@@ -749,47 +724,35 @@ static struct config_group *make_plane_group(struct config_group *group,
 {
 	struct vkms_configfs_device *dev;
 	struct vkms_configfs_plane *plane;
-	int ret;
 
 	dev = child_group_to_vkms_configfs_device(group);
 
-	mutex_lock(&dev->lock);
+	scoped_guard(mutex, &dev->lock) {
+		if (dev->enabled)
+			return ERR_PTR(-EBUSY);
 
-	if (dev->enabled) {
-		ret = -EINVAL;
-		goto err_unlock;
+		plane = kzalloc(sizeof(*plane), GFP_KERNEL);
+		if (!plane)
+			return ERR_PTR(-ENOMEM);
+
+		plane->dev = dev;
+
+		plane->config = vkms_config_create_plane(dev->config);
+		if (IS_ERR(plane->config)) {
+			kfree(plane);
+			return ERR_CAST(plane->config);
+		}
+
+		config_group_init_type_name(&plane->group, name, &plane_item_type);
+
+		config_group_init_type_name(&plane->possible_crtcs_group,
+					    "possible_crtcs",
+					    &plane_possible_crtcs_group_type);
+		configfs_add_default_group(&plane->possible_crtcs_group,
+					   &plane->group);
 	}
-
-	plane = kzalloc(sizeof(*plane), GFP_KERNEL);
-	if (!plane) {
-		ret = -ENOMEM;
-		goto err_unlock;
-	}
-
-	plane->dev = dev;
-
-	plane->config = vkms_config_create_plane(dev->config);
-	if (IS_ERR(plane->config)) {
-		ret = PTR_ERR(plane->config);
-		goto err_free;
-	}
-
-	config_group_init_type_name(&plane->group, name, &plane_item_type);
-
-	config_group_init_type_name(&plane->possible_crtcs_group,
-				    "possible_crtcs",
-				    &plane_possible_crtcs_group_type);
-	configfs_add_default_group(&plane->possible_crtcs_group, &plane->group);
-
-	mutex_unlock(&dev->lock);
 
 	return &plane->group;
-
-err_free:
-	kfree(plane);
-err_unlock:
-	mutex_unlock(&dev->lock);
-	return ERR_PTR(ret);
 }
 
 static struct configfs_group_operations planes_group_operations = {
@@ -814,16 +777,12 @@ static int encoder_possible_crtcs_allow_link(struct config_item *src,
 	encoder = encoder_possible_crtcs_item_to_vkms_configfs_encoder(src);
 	crtc = crtc_item_to_vkms_configfs_crtc(target);
 
-	mutex_lock(&encoder->dev->lock);
+	scoped_guard(mutex, &encoder->dev->lock) {
+		if (encoder->dev->enabled)
+			return -EBUSY;
 
-	if (encoder->dev->enabled) {
-		mutex_unlock(&encoder->dev->lock);
-		return -EPERM;
+		ret = vkms_config_encoder_attach_crtc(encoder->config, crtc->config);
 	}
-
-	ret = vkms_config_encoder_attach_crtc(encoder->config, crtc->config);
-
-	mutex_unlock(&encoder->dev->lock);
 
 	return ret;
 }
@@ -837,9 +796,8 @@ static void encoder_possible_crtcs_drop_link(struct config_item *src,
 	encoder = encoder_possible_crtcs_item_to_vkms_configfs_encoder(src);
 	crtc = crtc_item_to_vkms_configfs_crtc(target);
 
-	mutex_lock(&encoder->dev->lock);
-	vkms_config_encoder_detach_crtc(encoder->config, crtc->config);
-	mutex_unlock(&encoder->dev->lock);
+	scoped_guard(mutex, &encoder->dev->lock)
+		vkms_config_encoder_detach_crtc(encoder->config, crtc->config);
 }
 
 static ssize_t encoder_type_show(struct config_item *item, char *page)
@@ -910,10 +868,10 @@ static void encoder_release(struct config_item *item)
 	encoder = encoder_item_to_vkms_configfs_encoder(item);
 	lock = &encoder->dev->lock;
 
-	mutex_lock(lock);
-	vkms_config_destroy_encoder(encoder->dev->config, encoder->config);
-	kfree(encoder);
-	mutex_unlock(lock);
+	scoped_guard(mutex, lock) {
+		vkms_config_destroy_encoder(encoder->dev->config, encoder->config);
+		kfree(encoder);
+	}
 }
 
 static struct configfs_item_operations encoder_item_operations = {
@@ -931,48 +889,36 @@ static struct config_group *make_encoder_group(struct config_group *group,
 {
 	struct vkms_configfs_device *dev;
 	struct vkms_configfs_encoder *encoder;
-	int ret;
 
 	dev = child_group_to_vkms_configfs_device(group);
 
-	mutex_lock(&dev->lock);
+	scoped_guard(mutex, &dev->lock) {
+		if (dev->enabled)
+			return ERR_PTR(-EBUSY);
 
-	if (dev->enabled) {
-		ret = -EINVAL;
-		goto err_unlock;
+		encoder = kzalloc(sizeof(*encoder), GFP_KERNEL);
+		if (!encoder)
+			return ERR_PTR(-ENOMEM);
+
+		encoder->dev = dev;
+
+		encoder->config = vkms_config_create_encoder(dev->config);
+		if (IS_ERR(encoder->config)) {
+			kfree(encoder);
+			return ERR_CAST(encoder->config);
+		}
+
+		config_group_init_type_name(&encoder->group, name,
+					    &encoder_item_type);
+
+		config_group_init_type_name(&encoder->possible_crtcs_group,
+					    "possible_crtcs",
+					    &encoder_possible_crtcs_group_type);
+		configfs_add_default_group(&encoder->possible_crtcs_group,
+					   &encoder->group);
 	}
-
-	encoder = kzalloc(sizeof(*encoder), GFP_KERNEL);
-	if (!encoder) {
-		ret = -ENOMEM;
-		goto err_unlock;
-	}
-
-	encoder->dev = dev;
-
-	encoder->config = vkms_config_create_encoder(dev->config);
-	if (IS_ERR(encoder->config)) {
-		ret = PTR_ERR(encoder->config);
-		goto err_free;
-	}
-
-	config_group_init_type_name(&encoder->group, name, &encoder_item_type);
-
-	config_group_init_type_name(&encoder->possible_crtcs_group,
-				    "possible_crtcs",
-				    &encoder_possible_crtcs_group_type);
-	configfs_add_default_group(&encoder->possible_crtcs_group,
-				   &encoder->group);
-
-	mutex_unlock(&dev->lock);
 
 	return &encoder->group;
-
-err_free:
-	kfree(encoder);
-err_unlock:
-	mutex_unlock(&dev->lock);
-	return ERR_PTR(ret);
 }
 
 static struct configfs_group_operations encoders_group_operations = {
@@ -991,9 +937,8 @@ static ssize_t connector_status_show(struct config_item *item, char *page)
 
 	connector = connector_item_to_vkms_configfs_connector(item);
 
-	mutex_lock(&connector->dev->lock);
-	status = vkms_config_connector_get_status(connector->config);
-	mutex_unlock(&connector->dev->lock);
+	scoped_guard(mutex, &connector->dev->lock)
+		status = vkms_config_connector_get_status(connector->config);
 
 	return sprintf(page, "%u", status);
 }
@@ -1014,14 +959,12 @@ static ssize_t connector_status_store(struct config_item *item,
 	    status != connector_status_unknown)
 		return -EINVAL;
 
-	mutex_lock(&connector->dev->lock);
+	scoped_guard(mutex, &connector->dev->lock) {
+		vkms_config_connector_set_status(connector->config, status);
 
-	vkms_config_connector_set_status(connector->config, status);
-
-	if (connector->dev->enabled)
-		vkms_trigger_connector_hotplug(connector->dev->config->dev);
-
-	mutex_unlock(&connector->dev->lock);
+		if (connector->dev->enabled)
+			vkms_trigger_connector_hotplug(connector->dev->config->dev);
+	}
 
 	return (ssize_t)count;
 }
@@ -1053,6 +996,10 @@ static ssize_t connector_edid_store(struct config_item *item,
 	scoped_guard(mutex, &connector->dev->lock)
 	{
 		vkms_config_connector_set_edid(connector->config, page, count);
+
+		if (connector->dev->enabled && vkms_config_connector_get_status(connector->config) != connector_status_disconnected)
+			vkms_trigger_connector_hotplug(connector->dev->config->dev);
+
 	}
 
 	return count;
@@ -1138,10 +1085,10 @@ static void connector_release(struct config_item *item)
 	connector = connector_item_to_vkms_configfs_connector(item);
 	lock = &connector->dev->lock;
 
-	mutex_lock(lock);
-	vkms_config_destroy_connector(connector->config);
-	kfree(connector);
-	mutex_unlock(lock);
+	scoped_guard(mutex, lock) {
+		vkms_config_destroy_connector(connector->config);
+		kfree(connector);
+	}
 }
 
 static struct configfs_item_operations connector_item_operations = {
@@ -1167,17 +1114,13 @@ static int connector_possible_encoders_allow_link(struct config_item *src,
 	connector = connector_possible_encoders_item_to_vkms_configfs_connector(src);
 	encoder = encoder_item_to_vkms_configfs_encoder(target);
 
-	mutex_lock(&connector->dev->lock);
+	scoped_guard(mutex, &connector->dev->lock) {
+		if (connector->dev->enabled)
+			return -EBUSY;
 
-	if (connector->dev->enabled) {
-		mutex_unlock(&connector->dev->lock);
-		return -EPERM;
+		ret = vkms_config_connector_attach_encoder(connector->config,
+							   encoder->config);
 	}
-
-	ret = vkms_config_connector_attach_encoder(connector->config,
-						   encoder->config);
-
-	mutex_unlock(&connector->dev->lock);
 
 	return ret;
 }
@@ -1191,10 +1134,10 @@ static void connector_possible_encoders_drop_link(struct config_item *src,
 	connector = connector_possible_encoders_item_to_vkms_configfs_connector(src);
 	encoder = encoder_item_to_vkms_configfs_encoder(target);
 
-	mutex_lock(&connector->dev->lock);
-	vkms_config_connector_detach_encoder(connector->config,
-					     encoder->config);
-	mutex_unlock(&connector->dev->lock);
+	scoped_guard(mutex, &connector->dev->lock) {
+		vkms_config_connector_detach_encoder(connector->config,
+						     encoder->config);
+	}
 }
 
 static struct configfs_item_operations connector_possible_encoders_item_operations = {
@@ -1212,49 +1155,36 @@ static struct config_group *make_connector_group(struct config_group *group,
 {
 	struct vkms_configfs_device *dev;
 	struct vkms_configfs_connector *connector;
-	int ret;
 
 	dev = child_group_to_vkms_configfs_device(group);
 
-	mutex_lock(&dev->lock);
+	scoped_guard(mutex, &dev->lock) {
+		if (dev->enabled)
+			return ERR_PTR(-EBUSY);
 
-	if (dev->enabled) {
-		ret = -EINVAL;
-		goto err_unlock;
+		connector = kzalloc(sizeof(*connector), GFP_KERNEL);
+		if (!connector)
+			return ERR_PTR(-ENOMEM);
+
+		connector->dev = dev;
+
+		connector->config = vkms_config_create_connector(dev->config);
+		if (IS_ERR(connector->config)) {
+			kfree(connector);
+			return ERR_CAST(connector->config);
+		}
+
+		config_group_init_type_name(&connector->group, name,
+					    &connector_item_type);
+
+		config_group_init_type_name(&connector->possible_encoders_group,
+					    "possible_encoders",
+					    &connector_possible_encoders_group_type);
+		configfs_add_default_group(&connector->possible_encoders_group,
+					   &connector->group);
 	}
-
-	connector = kzalloc(sizeof(*connector), GFP_KERNEL);
-	if (!connector) {
-		ret = -ENOMEM;
-		goto err_unlock;
-	}
-
-	connector->dev = dev;
-
-	connector->config = vkms_config_create_connector(dev->config);
-	if (IS_ERR(connector->config)) {
-		ret = PTR_ERR(connector->config);
-		goto err_free;
-	}
-
-	config_group_init_type_name(&connector->group, name,
-				    &connector_item_type);
-
-	config_group_init_type_name(&connector->possible_encoders_group,
-				    "possible_encoders",
-				    &connector_possible_encoders_group_type);
-	configfs_add_default_group(&connector->possible_encoders_group,
-				   &connector->group);
-
-	mutex_unlock(&dev->lock);
 
 	return &connector->group;
-
-err_free:
-	kfree(connector);
-err_unlock:
-	mutex_unlock(&dev->lock);
-	return ERR_PTR(ret);
 }
 
 static struct configfs_group_operations connectors_group_operations = {
@@ -1273,9 +1203,8 @@ static ssize_t device_enabled_show(struct config_item *item, char *page)
 
 	dev = device_item_to_vkms_configfs_device(item);
 
-	mutex_lock(&dev->lock);
-	enabled = dev->enabled;
-	mutex_unlock(&dev->lock);
+	scoped_guard(mutex, &dev->lock)
+		enabled = dev->enabled;
 
 	return sprintf(page, "%d\n", enabled);
 }
@@ -1292,31 +1221,22 @@ static ssize_t device_enabled_store(struct config_item *item, const char *page,
 	if (kstrtobool(page, &enabled))
 		return -EINVAL;
 
-	mutex_lock(&dev->lock);
+	scoped_guard(mutex, &dev->lock) {
+		if (!dev->enabled && enabled) {
+			if (!vkms_config_is_valid(dev->config))
+				return -EINVAL;
 
-	if (!dev->enabled && enabled) {
-		if (!vkms_config_is_valid(dev->config)) {
-			ret = -EINVAL;
-			goto err_unlock;
+			ret = vkms_create(dev->config);
+			if (ret)
+				return ret;
+		} else if (dev->enabled && !enabled) {
+			vkms_destroy(dev->config);
 		}
 
-		ret = vkms_create(dev->config);
-	} else if (dev->enabled && !enabled) {
-		vkms_destroy(dev->config);
+		dev->enabled = enabled;
 	}
 
-	if (ret)
-		goto err_unlock;
-
-	dev->enabled = enabled;
-
-	mutex_unlock(&dev->lock);
-
 	return (ssize_t)count;
-
-err_unlock:
-	mutex_unlock(&dev->lock);
-	return ret;
 }
 
 CONFIGFS_ATTR(device_, enabled);

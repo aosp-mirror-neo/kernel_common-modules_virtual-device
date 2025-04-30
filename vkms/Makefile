@@ -12,3 +12,4 @@ vkms-y := \
 	vkms_configfs.o
 
 obj-$(CONFIG_DRM_VKMS) += vkms.o
+obj-$(CONFIG_DRM_VKMS_KUNIT_TEST) += tests/
