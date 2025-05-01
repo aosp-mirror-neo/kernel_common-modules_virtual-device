@@ -411,6 +411,7 @@ int dxgvmb_send_sync_msg(struct dxgvmbuschannel *channel, void *command,
 	struct completion completion = {};
 	struct virtio_dxgkrnl_command *ctx;
 	struct virtio_dxgkrnl *vp;
+	int wait_ret;
 	int err;
 	int cur_command_seqno;
 	bool command_queue_locked = false;
@@ -470,7 +471,22 @@ int dxgvmb_send_sync_msg(struct dxgvmbuschannel *channel, void *command,
 	 */
 	dev_dbg(dxgglobaldev, "wait_for_completion_interruptible #%d start",
 		cur_command_seqno);
-	wait_for_completion_interruptible(&completion);
+	wait_ret = wait_for_completion_interruptible(&completion);
+
+	if (wait_ret == -ERESTARTSYS) {
+		if (vp->command_vq->num_free < (vp->command_vq->num_max/2)) {
+			/* If a process is being killed it can fill up the virtqueue with deletions.
+			 * Here we check if the virtqueue is half full, and if so we do an
+			 * uninterruptible wait with a timeout of 500 usecs to give the host device
+			 * time to process deletions.
+			 */
+			wait_ret = wait_for_completion_timeout(&completion, usecs_to_jiffies(500));
+			dev_dbg(dxgglobaldev,
+			        "performed uninterriptible wait to protect virtqueue, remaining=%d",
+				wait_ret);
+		}
+	}
+
 	// In case we've been interrupted, set completion to NULL here on ctx.
 	ctx->completion = NULL;
 	dev_dbg(dxgglobaldev, "wait_for_completion_interruptible #%d end",
