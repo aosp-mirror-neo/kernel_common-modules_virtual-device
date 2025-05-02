@@ -134,7 +134,7 @@ enum sync_reg_id {
 	SYNC_REG_INIT				= 0x18,
 };
 
-#define GOLDFISH_SYNC_MAX_CMDS 32
+#define GOLDFISH_SYNC_MAX_CMDS 64
 
 /* The driver state: */
 struct goldfish_sync_state {
