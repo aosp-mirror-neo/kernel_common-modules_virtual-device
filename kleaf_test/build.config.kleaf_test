@@ -2,4 +2,3 @@
 
 # For kernel_boot_images_outs_contains_ramdisk_test
 BOOT_IMAGE_HEADER_VERSION=4
-VENDOR_BOOTCONFIG="fake"
