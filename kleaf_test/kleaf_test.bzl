@@ -972,6 +972,7 @@ def _kernel_boot_images_outs_contains_ramdisk_test(name, kernel_build, kernel_mo
         vendor_boot_name = "vendor_boot",
         ramdisk_compression = "lz4",
         unpack_ramdisk = True,
+        header_version = 4,
         **private_kwargs
     )
 
@@ -1029,18 +1030,37 @@ def _vendor_boot_test(name, kernel_build, kernel_modules_install, **private_kwar
         kernel_vendor_cmdline = "mycmdline1=1,mycmdline2=2",
         outs = ["vendor_boot.img", "vendor-bootconfig.img"],
         unpack_ramdisk = False,
+        header_version = 4,
     )
     vendor_boot_image_test(
         name = name + "_4_test",
         vendor_boot_image = name + "_4_image",
         check_vendor_bootconfig = True,
         expected_cmdline = "mycmdline1=1,mycmdline2=2 bootconfig",
+        expected_header_version = 4,
+        **private_kwargs
+    )
+
+    # Check that header_version defaults to 3 if neither
+    # header version nor BOOT_IMAGE_HEADER_VERSION is specified.
+    vendor_boot_image(
+        name = name + "_3_image",
+        kernel_build = kernel_build,
+        initramfs = name + "_initramfs",
+        outs = ["vendor_boot.img"],
+        unpack_ramdisk = False,
+    )
+    vendor_boot_image_test(
+        name = name + "_3_test",
+        vendor_boot_image = name + "_3_image",
+        expected_header_version = 3,
         **private_kwargs
     )
     native.test_suite(
         name = name,
         tests = [
             name + "_4_test",
+            name + "_3_test",
         ],
         **private_kwargs
     )
