@@ -134,7 +134,12 @@ enum sync_reg_id {
 	SYNC_REG_INIT				= 0x18,
 };
 
+#if defined(__i686__)
+// This kernel target uses a smaller stack frame size (1024)
+#define GOLDFISH_SYNC_MAX_CMDS 32
+#else
 #define GOLDFISH_SYNC_MAX_CMDS 64
+#endif
 
 /* The driver state: */
 struct goldfish_sync_state {
