@@ -1,0 +1,138 @@
+# Copyright (C) 2025 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@kleaf//build/kernel/kleaf:kernel.bzl", "ddk_module")
+
+# Test crate_root == name of module.
+ddk_module(
+    name = "crate_root_is_module_name",
+    out = "standalone_module.ko",
+    crate_root = "standalone_module.rs",
+    kernel_build = "@kleaf//common:kernel_aarch64",
+)
+
+# Test crate_root == name of module, and crate_root is duplicated in srcs.
+ddk_module(
+    name = "crate_root_is_module_name_and_is_in_srcs",
+    srcs = ["standalone_module.rs"],
+    out = "standalone_module.ko",
+    crate_root = "standalone_module.rs",
+    kernel_build = "@kleaf//common:kernel_aarch64",
+)
+
+# Test crate_root != name of module
+ddk_module(
+    name = "crate_root_is_not_module_name",
+    out = "mymod.ko",
+    crate_root = "standalone_module.rs",
+    kernel_build = "@kleaf//common:kernel_aarch64",
+)
+
+# Test crate_root != name of module, and crate_root is duplicated in srcs.
+ddk_module(
+    name = "crate_root_is_not_module_name_and_is_in_srcs",
+    srcs = ["standalone_module.rs"],
+    out = "mymod.ko",
+    crate_root = "standalone_module.rs",
+    kernel_build = "@kleaf//common:kernel_aarch64",
+)
+
+# Test a module from multiple files.
+ddk_module(
+    name = "multiple_files",
+    srcs = ["my_module.rs"],
+    out = "mymod.ko",
+    crate_root = "crate_root.rs",
+    kernel_build = "@kleaf//common:kernel_aarch64",
+)
+
+# Test a module from multiple files, and crate_root is duplicated in srcs.
+ddk_module(
+    name = "multiple_files_and_crate_root_is_in_srcs",
+    srcs = [
+        "crate_root.rs",
+        "my_module.rs",
+    ],
+    out = "mymod.ko",
+    crate_root = "crate_root.rs",
+    kernel_build = "@kleaf//common:kernel_aarch64",
+)
+
+# Test a DDK module with generated Rust module files
+write_file(
+    name = "generated_module_source",
+    out = "generated_module.rs",
+    content = [
+        "pub(crate) fn module_fun() {}",
+        "",  # new line at the end
+    ],
+)
+
+ddk_module(
+    name = "generated_module",
+    srcs = [":generated_module_source"],
+    out = "mymod.ko",
+    crate_root = "crate_root_with_generated_module.rs",
+    kernel_build = "@kleaf//common:kernel_aarch64",
+)
+
+# Test a DDK module with generated Rust create_root files
+write_file(
+    name = "crate_root_generated",
+    out = "crate_root_generated.rs",
+    content = ["""
+        //! Test of a standalone module with a single .rs file.
+        use kernel::prelude::*;
+
+        module! {
+            type: TestRustModule,
+            name: "test_rust_module",
+            author: "Hong, Yifan <elsk@google.com>",
+            description: "Test of a module with a single crate with multiple .rs files.",
+            license: "GPL",
+        }
+
+        struct TestRustModule {}
+
+        impl kernel::Module for TestRustModule {
+            fn init(_module: &'static ThisModule) -> Result<Self> {
+                Ok(TestRustModule {})
+            }
+        }
+    """],
+)
+
+ddk_module(
+    name = "generated_crate_root",
+    out = "mymod.ko",
+    crate_root = ":crate_root_generated",
+    kernel_build = "@kleaf//common:kernel_aarch64",
+)
+
+build_test(
+    name = "rust_test",
+    targets = [
+        # keep sorted
+        ":crate_root_is_module_name",
+        ":crate_root_is_module_name_and_is_in_srcs",
+        ":crate_root_is_not_module_name",
+        ":crate_root_is_not_module_name_and_is_in_srcs",
+        ":generated_crate_root",
+        ":generated_module",
+        ":multiple_files",
+        ":multiple_files_and_crate_root_is_in_srcs",
+    ],
+)
