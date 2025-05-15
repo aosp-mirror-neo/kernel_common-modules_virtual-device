@@ -578,12 +578,26 @@ def _ddk_cflags_test(name, kernel_build, **private_kwargs):
         **private_kwargs
     )
 
+    ddk_module(
+        name = name + "_removed_copts",
+        kernel_build = kernel_build,
+        out = "copts_test/mymodule.ko",
+        srcs = [
+            "copts_test/use_float.c",
+        ],
+        removed_copts = [
+            "-mgeneral-regs-only",
+        ],
+        **private_kwargs
+    )
+
     build_test(
         name = name,
         targets = [
             name + "_copts",
             name + "_copts_source_is_out",
             name + "_copts_out_is_nested",
+            name + "_removed_copts",
         ],
         **private_kwargs
     )
