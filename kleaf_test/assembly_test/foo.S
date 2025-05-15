@@ -14,10 +14,15 @@
  */
 
 #include <linux/linkage.h>
+#include "myinclude.h"
 
 SYM_FUNC_START(foo)
 
 #ifndef ASOPTS_DEFINE
+#error
+#endif
+
+#ifndef LOCAL_DEFINE
 #error
 #endif
 
