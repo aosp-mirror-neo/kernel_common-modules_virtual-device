@@ -12,6 +12,7 @@ load(
     "kernel_modules_install",
     "vendor_boot_image",
 )
+load("//build/kernel/kleaf/artifact_tests:vendor_boot_image_test.bzl", "vendor_boot_image_test")
 
 def kleaf_test(
         name,
@@ -29,6 +30,12 @@ def kleaf_test(
 
     private_kwargs = kwargs | dict(
         visibility = ["//visibility:private"],
+    )
+
+    kernel_modules_install(
+        name = name + "_modules_install",
+        kernel_build = kernel_build,
+        **private_kwargs
     )
 
     _ddk_module_dep_test(
@@ -112,6 +119,14 @@ def kleaf_test(
     _kernel_boot_images_outs_contains_ramdisk_test(
         name = name + "_kernel_boot_images_outs_contains_ramdisk_test",
         kernel_build = kernel_build,
+        kernel_modules_install = name + "_modules_install",
+        **private_kwargs
+    )
+
+    _vendor_boot_test(
+        name = name + "_vendor_boot_test",
+        kernel_build = kernel_build,
+        kernel_modules_install = name + "_modules_install",
         **private_kwargs
     )
 
@@ -132,6 +147,7 @@ def kleaf_test(
             name + "_ddk_submodule_linux_include_in_top_level_test",
             name + "_ddk_autofdo_test",
             name + "_kernel_boot_images_outs_contains_ramdisk_test",
+            name + "_vendor_boot_test",
         ] + extras,
         **kwargs
     )
@@ -935,7 +951,7 @@ def _ddk_autofdo_test(name, kernel_build, **private_kwargs):
         **private_kwargs
     )
 
-def _kernel_boot_images_outs_contains_ramdisk_test(name, kernel_build, **private_kwargs):
+def _kernel_boot_images_outs_contains_ramdisk_test(name, kernel_build, kernel_modules_install, **private_kwargs):
     """Test the following.
 
     If:
@@ -947,17 +963,12 @@ def _kernel_boot_images_outs_contains_ramdisk_test(name, kernel_build, **private
 
     See b/361733833.
     """
-    kernel_modules_install(
-        name = name + "_modules_install",
-        kernel_build = kernel_build,
-        **private_kwargs
-    )
 
     vendor_boot_image(
         name = name + "_images_set_ramdisk_compression_vendor_boot",
         kernel_build = kernel_build,
         initramfs = name + "_images_set_ramdisk_compression_initramfs",
-        outs = ["dtb.img", "ramdisk.lz4", "vendor_boot.img", "vendor-bootconfig.img"],
+        outs = ["dtb.img", "ramdisk.lz4", "vendor_boot.img"],
         vendor_boot_name = "vendor_boot",
         ramdisk_compression = "lz4",
         unpack_ramdisk = True,
@@ -966,7 +977,7 @@ def _kernel_boot_images_outs_contains_ramdisk_test(name, kernel_build, **private
 
     initramfs(
         name = name + "_images_set_ramdisk_compression_initramfs",
-        kernel_modules_install = name + "_modules_install",
+        kernel_modules_install = kernel_modules_install,
         ramdisk_compression = "lz4",
         vendor_boot_name = "vendor_boot",
         **private_kwargs
@@ -976,7 +987,7 @@ def _kernel_boot_images_outs_contains_ramdisk_test(name, kernel_build, **private
         name = name + "_images_unset_ramdisk_compression_vendor_boot",
         kernel_build = kernel_build,
         initramfs = name + "_images_unset_ramdisk_compression_initramfs",
-        outs = ["dtb.img", "ramdisk.lz4", "vendor_boot.img", "vendor-bootconfig.img"],
+        outs = ["dtb.img", "ramdisk.lz4", "vendor_boot.img"],
         vendor_boot_name = "vendor_boot",
         unpack_ramdisk = True,
         **private_kwargs
@@ -984,7 +995,7 @@ def _kernel_boot_images_outs_contains_ramdisk_test(name, kernel_build, **private
 
     initramfs(
         name = name + "_images_unset_ramdisk_compression_initramfs",
-        kernel_modules_install = name + "_modules_install",
+        kernel_modules_install = kernel_modules_install,
         vendor_boot_name = "vendor_boot",
         **private_kwargs
     )
@@ -996,6 +1007,40 @@ def _kernel_boot_images_outs_contains_ramdisk_test(name, kernel_build, **private
             name + "_images_set_ramdisk_compression_vendor_boot",
             name + "_images_unset_ramdisk_compression_initramfs",
             name + "_images_unset_ramdisk_compression_vendor_boot",
+        ],
+        **private_kwargs
+    )
+
+def _vendor_boot_test(name, kernel_build, kernel_modules_install, **private_kwargs):
+    initramfs(
+        name = name + "_initramfs",
+        kernel_modules_install = kernel_modules_install,
+        vendor_boot_name = "vendor_boot",
+        **private_kwargs
+    )
+    vendor_boot_image(
+        name = name + "_4_image",
+        kernel_build = kernel_build,
+        initramfs = name + "_initramfs",
+        vendor_bootconfig = [
+            "androidboot.selinux=enforcing",
+            "foo.bar=baz",
+        ],
+        kernel_vendor_cmdline = "mycmdline1=1,mycmdline2=2",
+        outs = ["vendor_boot.img", "vendor-bootconfig.img"],
+        unpack_ramdisk = False,
+    )
+    vendor_boot_image_test(
+        name = name + "_4_test",
+        vendor_boot_image = name + "_4_image",
+        check_vendor_bootconfig = True,
+        expected_cmdline = "mycmdline1=1,mycmdline2=2 bootconfig",
+        **private_kwargs
+    )
+    native.test_suite(
+        name = name,
+        tests = [
+            name + "_4_test",
         ],
         **private_kwargs
     )
