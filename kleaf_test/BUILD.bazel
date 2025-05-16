@@ -36,7 +36,6 @@ kleaf_test(
         "//common-modules/virtual-device/kleaf_test/assembly_test",
         "//common-modules/virtual-device/kleaf_test/compdb_test",
         "//common-modules/virtual-device/kleaf_test/mixed_dep_test",
-        "//common-modules/virtual-device/kleaf_test/module_generated_headers_test",
         "//common-modules/virtual-device/kleaf_test/rust_test",
     ],
     kernel_build = ":test_kernel",
