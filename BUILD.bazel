@@ -35,28 +35,6 @@ load(
 load("//common:modules.bzl", "get_gki_modules_list", "get_kunit_modules_list")
 
 filegroup(
-    name = "common_sources",
-    srcs = glob(
-        [
-            "*",
-            "configs/*",
-        ],
-        exclude = [
-            "Makefile",
-            "BUILD.bazel",
-        ],
-    ),
-)
-
-filegroup(
-    name = "arm_fragment",
-    srcs = [
-        "arm.fragment",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
     name = "goldfish_address_space_sources",
     srcs = [
         "goldfish_drivers/defconfig_test.h",
@@ -86,39 +64,6 @@ filegroup(
         "v4l2loopback/v4l2loopback.c",
         "v4l2loopback/v4l2loopback.h",
         "v4l2loopback/v4l2loopback_formats.h",
-    ],
-)
-
-filegroup(
-    name = "virtual_device_aarch64_common_sources",
-    srcs = [
-        ":common_sources",
-        "//common:kernel_aarch64_sources",
-    ],
-)
-
-filegroup(
-    name = "virtual_device_arm_common_sources",
-    srcs = [
-        ":common_sources",
-        # We don't have an arm-specific source list, so use the common one.
-        "//common:common_kernel_sources",
-    ],
-)
-
-filegroup(
-    name = "virtual_device_riscv64_common_sources",
-    srcs = [
-        ":common_sources",
-        "//common:kernel_riscv64_sources",
-    ],
-)
-
-filegroup(
-    name = "virtual_device_x86_64_common_sources",
-    srcs = [
-        ":common_sources",
-        "//common:kernel_x86_64_sources",
     ],
 )
 
@@ -193,7 +138,7 @@ _VIRT_RISCV64_MODULES = [
 
 kernel_build(
     name = "virtual_device_x86_64",
-    srcs = [":virtual_device_x86_64_common_sources"],
+    srcs = ["//common:kernel_x86_64_sources"],
     outs = [],
     arch = "x86_64",
     base_kernel = "//common:kernel_x86_64",
@@ -397,7 +342,7 @@ initramfs_modules_lists_test(
 
 kernel_build(
     name = "virtual_device_aarch64",
-    srcs = [":virtual_device_aarch64_common_sources"],
+    srcs = ["//common:kernel_aarch64_sources"],
     outs = [
         "arch/arm64/boot/dts/arm/fvp-base-revc.dtb",
     ],
@@ -599,7 +544,7 @@ test_suite(
 
 kernel_build(
     name = "virtual_device_aarch64_16k",
-    srcs = [":virtual_device_aarch64_common_sources"],
+    srcs = ["//common:kernel_aarch64_sources"],
     outs = [
         "arch/arm64/boot/dts/arm/fvp-base-revc.dtb",
     ],
@@ -702,7 +647,8 @@ pkg_install(
 
 kernel_build(
     name = "virtual_device_arm",
-    srcs = [":virtual_device_arm_common_sources"],
+    # We don't have an arm-specific source list, so use the common one.
+    srcs = ["//common:common_kernel_sources"],
     outs = [
         "System.map",
         "vmlinux",
@@ -771,7 +717,7 @@ pkg_install(
 
 kernel_build(
     name = "virtual_device_riscv64",
-    srcs = [":virtual_device_riscv64_common_sources"],
+    srcs = ["//common:kernel_riscv64_sources"],
     outs = [],
     arch = "riscv64",
     base_kernel = "//common:kernel_riscv64",
@@ -864,7 +810,7 @@ pkg_install(
 
 kernel_build(
     name = "server_aarch64",
-    srcs = [":virtual_device_aarch64_common_sources"],
+    srcs = ["//common:kernel_aarch64_sources"],
     outs = [
         "System.map",
         "arch/arm64/boot/Image",
@@ -931,7 +877,7 @@ pkg_install(
 
 kernel_build(
     name = "server_x86_64",
-    srcs = [":virtual_device_x86_64_common_sources"],
+    srcs = ["//common:kernel_x86_64_sources"],
     outs = [
         "System.map",
         "arch/x86/boot/bzImage",
