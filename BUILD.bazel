@@ -86,6 +86,12 @@ filegroup(
     name = "vkms_sources",
     srcs = [
         "vkms/vkms_composer.c",
+        "vkms/vkms_config.c",
+        "vkms/vkms_config.h",
+        "vkms/vkms_configfs.c",
+        "vkms/vkms_configfs.h",
+        "vkms/vkms_connector.c",
+        "vkms/vkms_connector.h",
         "vkms/vkms_crtc.c",
         "vkms/vkms_drv.c",
         "vkms/vkms_drv.h",
