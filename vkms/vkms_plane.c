@@ -11,7 +11,15 @@
 
 #include "vkms_drv.h"
 #include "vkms_formats.h"
-#include "vkms_config.h"
+
+static const u32 vkms_formats[] = {
+	DRM_FORMAT_ARGB8888,
+	DRM_FORMAT_XRGB8888,
+	DRM_FORMAT_ABGR8888,
+	DRM_FORMAT_XRGB16161616,
+	DRM_FORMAT_ARGB16161616,
+	DRM_FORMAT_RGB565
+};
 
 static struct drm_plane_state *
 vkms_plane_duplicate_state(struct drm_plane *plane)
@@ -111,8 +119,6 @@ static void vkms_plane_atomic_update(struct drm_plane *plane,
 	frame_info->rotation = new_state->rotation;
 
 	vkms_plane_state->pixel_read_line = get_pixel_read_line_function(fmt);
-	get_conversion_matrix_to_argb_u16(fmt, new_state->color_encoding, new_state->color_range,
-					  &vkms_plane_state->conversion_matrix);
 }
 
 static int vkms_plane_atomic_check(struct drm_plane *plane,
@@ -182,31 +188,22 @@ static const struct drm_plane_helper_funcs vkms_plane_helper_funcs = {
 };
 
 struct vkms_plane *vkms_plane_init(struct vkms_device *vkmsdev,
-				   struct vkms_config_plane *config)
+				   enum drm_plane_type type)
 {
 	struct drm_device *dev = &vkmsdev->drm;
 	struct vkms_plane *plane;
 
 	plane = drmm_universal_plane_alloc(dev, struct vkms_plane, base, 0,
 					   &vkms_plane_funcs,
-					   vkms_config_plane_get_supported_formats(config),
-					   vkms_config_plane_get_supported_formats_count(config),
-					   NULL, vkms_config_plane_get_type(config),
-					   vkms_config_plane_get_name(config));
+					   vkms_formats, ARRAY_SIZE(vkms_formats),
+					   NULL, type, NULL);
 	if (IS_ERR(plane))
 		return plane;
 
 	drm_plane_helper_add(&plane->base, &vkms_plane_helper_funcs);
 
-	drm_plane_create_rotation_property(&plane->base,
-					   config->default_rotation,
-					   config->supported_rotations);
-
-	drm_plane_create_color_properties(&plane->base,
-					  config->supported_color_encoding,
-					  config->supported_color_range,
-					  config->default_color_encoding,
-					  config->default_color_range);
+	drm_plane_create_rotation_property(&plane->base, DRM_MODE_ROTATE_0,
+					   DRM_MODE_ROTATE_MASK | DRM_MODE_REFLECT_MASK);
 
 	return plane;
 }
