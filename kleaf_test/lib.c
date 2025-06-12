@@ -13,4 +13,6 @@
  *
  */
 
+void mylib(void);
+
 void mylib(void) {}

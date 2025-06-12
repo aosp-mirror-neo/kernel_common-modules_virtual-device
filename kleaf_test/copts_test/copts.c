@@ -42,6 +42,6 @@ MODULE_LICENSE("GPL v2");
 MY_FUNC_DECL
 
 // -Wno-null-dereference -Wno-unused-value
-void other_func(void) {
+static __maybe_unused void other_func(void) {
     *((int8_t*)NULL);
 }
