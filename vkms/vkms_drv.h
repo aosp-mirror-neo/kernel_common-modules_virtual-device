@@ -45,23 +45,6 @@ struct vkms_frame_info {
 	unsigned int rotation;
 };
 
-/**
- * struct pixel_argb_u16 - Internal representation of a pixel color.
- * @a: Alpha component value, stored in 16 bits, without padding, using
- *     machine endianness
- * @r: Red component value, stored in 16 bits, without padding, using
- *     machine endianness
- * @g: Green component value, stored in 16 bits, without padding, using
- *     machine endianness
- * @b: Blue component value, stored in 16 bits, without padding, using
- *     machine endianness
- *
- * The goal of this structure is to keep enough precision to ensure
- * correct composition results in VKMS and simplifying color
- * manipulation by splitting each component into its own field.
- * Caution: the byte ordering of this structure is machine-dependent,
- * you can't cast it directly to AR48 or xR48.
- */
 struct pixel_argb_u16 {
 	u16 a, r, g, b;
 };
@@ -71,20 +54,26 @@ struct line_buffer {
 	struct pixel_argb_u16 *pixels;
 };
 
+struct vkms_writeback_job;
 /**
- * typedef pixel_write_t - These functions are used to read a pixel from a
+ * typedef pixel_write_line_t - These functions are used to read a pixel from a
  * &struct pixel_argb_u16, convert it in a specific format and write it in the @out_pixel
  * buffer.
  *
- * @out_pixel: destination address to write the pixel
- * @in_pixel: pixel to write
+ * @wb: the writeback job to write the output of the conversion
+ * @in_pixels: Source buffer containing the line to convert
+ * @count: The width of a line
+ * @x_start: The x (width) coordinate in the destination plane
+ * @y_start: The y (height) coordinate in the destination plane
  */
-typedef void (*pixel_write_t)(u8 *out_pixel, const struct pixel_argb_u16 *in_pixel);
+typedef void (*pixel_write_line_t)(struct vkms_writeback_job *wb,
+			      struct pixel_argb_u16 *in_pixels, int count, int x_start,
+			      int y_start);
 
 struct vkms_writeback_job {
 	struct iosys_map data[DRM_FORMAT_MAX_PLANES];
 	struct vkms_frame_info wb_frame_info;
-	pixel_write_t pixel_write;
+	pixel_write_line_t pixel_write;
 };
 
 /**
@@ -227,6 +216,8 @@ struct vkms_output {
 };
 
 struct vkms_config;
+struct vkms_config_plane;
+struct vkms_config_crtc;
 
 /**
  * struct vkms_device - Description of a VKMS device
@@ -259,6 +250,26 @@ struct vkms_device {
 	container_of(target, struct vkms_plane_state, base.base)
 
 /**
+ * vkms_create() - Create a device from a configuration
+ * @config: Config used to configure the new device
+ *
+ * A pointer to the created vkms_device is stored in @config
+ *
+ * Returns:
+ * 0 on success or an error.
+ */
+int vkms_create(struct vkms_config *config);
+
+/**
+ * vkms_destroy() - Destroy a device
+ * @config: Config from which the device was created
+ *
+ * The device is completely removed, but the @config is not freed. It can be
+ * reused or destroyed with vkms_config_destroy().
+ */
+void vkms_destroy(struct vkms_config *config);
+
+/**
  * vkms_crtc_init() - Initialize a CRTC for VKMS
  * @dev: DRM device associated with the VKMS buffer
  * @crtc: uninitialized CRTC device
@@ -267,7 +278,8 @@ struct vkms_device {
  */
 struct vkms_output *vkms_crtc_init(struct drm_device *dev,
 				   struct drm_plane *primary,
-				   struct drm_plane *cursor);
+				   struct drm_plane *cursor,
+				   struct vkms_config_crtc *config);
 
 /**
  * vkms_output_init() - Initialize all sub-components needed for a VKMS device.
@@ -283,7 +295,7 @@ int vkms_output_init(struct vkms_device *vkmsdev);
  * @type: type of plane to initialize
  */
 struct vkms_plane *vkms_plane_init(struct vkms_device *vkmsdev,
-				   enum drm_plane_type type);
+				   struct vkms_config_plane *config);
 
 /* CRC Support */
 const char *const *vkms_get_crc_sources(struct drm_crtc *crtc,
@@ -295,7 +307,6 @@ int vkms_verify_crc_source(struct drm_crtc *crtc, const char *source_name,
 /* Composer Support */
 void vkms_composer_worker(struct work_struct *work);
 void vkms_set_composer(struct vkms_output *out, bool enabled);
-void vkms_writeback_row(struct vkms_writeback_job *wb, const struct line_buffer *src_buffer, int y);
 
 /* Writeback */
 int vkms_enable_writeback_connector(struct vkms_device *vkmsdev, struct vkms_output *vkms_out);

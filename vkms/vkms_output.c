@@ -19,11 +19,7 @@ int vkms_output_init(struct vkms_device *vkmsdev)
 		return -EINVAL;
 
 	vkms_config_for_each_plane(vkmsdev->config, plane_cfg) {
-		enum drm_plane_type type;
-
-		type = vkms_config_plane_get_type(plane_cfg);
-
-		plane_cfg->plane = vkms_plane_init(vkmsdev, type);
+		plane_cfg->plane = vkms_plane_init(vkmsdev, plane_cfg);
 		if (IS_ERR(plane_cfg->plane)) {
 			DRM_DEV_ERROR(dev->dev, "Failed to init vkms plane\n");
 			return PTR_ERR(plane_cfg->plane);
@@ -37,7 +33,8 @@ int vkms_output_init(struct vkms_device *vkmsdev)
 		cursor = vkms_config_crtc_cursor_plane(vkmsdev->config, crtc_cfg);
 
 		crtc_cfg->crtc = vkms_crtc_init(dev, &primary->plane->base,
-						cursor ? &cursor->plane->base : NULL);
+						cursor ? &cursor->plane->base : NULL,
+						crtc_cfg);
 		if (IS_ERR(crtc_cfg->crtc)) {
 			DRM_ERROR("Failed to allocate CRTC\n");
 			return PTR_ERR(crtc_cfg->crtc);
@@ -71,7 +68,8 @@ int vkms_output_init(struct vkms_device *vkmsdev)
 			return -ENOMEM;
 		}
 		ret = drmm_encoder_init(dev, encoder_cfg->encoder, NULL,
-					DRM_MODE_ENCODER_VIRTUAL, NULL);
+					vkms_config_encoder_get_type(encoder_cfg),
+					vkms_config_encoder_get_name(encoder_cfg));
 		if (ret) {
 			DRM_ERROR("Failed to init encoder\n");
 			return ret;
@@ -83,11 +81,11 @@ int vkms_output_init(struct vkms_device *vkmsdev)
 		}
 	}
 
-	vkms_config_for_each_connector(vkmsdev->config, connector_cfg) {
+	vkms_config_for_each_connector_static(vkmsdev->config, connector_cfg) {
 		struct vkms_config_encoder *possible_encoder;
 		unsigned long idx = 0;
 
-		connector_cfg->connector = vkms_connector_init(vkmsdev);
+		connector_cfg->connector = vkms_connector_init(vkmsdev, connector_cfg);
 		if (IS_ERR(connector_cfg->connector)) {
 			DRM_ERROR("Failed to init connector\n");
 			return PTR_ERR(connector_cfg->connector);
@@ -106,6 +104,16 @@ int vkms_output_init(struct vkms_device *vkmsdev)
 	}
 
 	drm_mode_config_reset(dev);
+
+	vkms_config_for_each_connector_dynamic(vkmsdev->config, connector_cfg) {
+		if (connector_cfg->enabled) {
+			connector_cfg->connector = vkms_connector_hot_add(vkmsdev, connector_cfg);
+
+			if (IS_ERR(connector_cfg->connector)) {
+				return PTR_ERR(connector_cfg->connector);
+			}
+		}
+	}
 
 	return 0;
 }

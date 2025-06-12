@@ -67,7 +67,7 @@ static u16 lerp_u16(u16 a, u16 b, s64 t)
 
 	s64 delta = drm_fixp_mul(b_fp - a_fp, t);
 
-	return drm_fixp2int(a_fp + delta);
+	return drm_fixp2int_round(a_fp + delta);
 }
 
 static s64 get_lut_index(const struct vkms_color_lut *lut, u16 channel_value)
@@ -174,6 +174,23 @@ static enum pixel_read_direction direction_for_rotation(unsigned int rotation)
 
 	WARN_ONCE(true, "The inverse of the rotation gives an incorrect direction.");
 	return READ_LEFT_TO_RIGHT;
+}
+
+/**
+ * vkms_writeback_row() - Write a line to the writeback buffer
+ *
+ * @wb: Job where to insert the final image
+ * @src_buffer: Line to write
+ * @y: Row to write in the writeback buffer
+ */
+static void vkms_writeback_row(struct vkms_writeback_job *wb,
+			       const struct line_buffer *src_buffer, size_t y_start)
+{
+	struct vkms_frame_info *frame_info = &wb->wb_frame_info;
+	int x_start = frame_info->dst.x1;
+	int count = min_t(size_t, drm_rect_width(&frame_info->dst), src_buffer->n_pixels);
+
+	wb->pixel_write(wb, src_buffer->pixels, count, x_start, y_start);
 }
 
 /**
