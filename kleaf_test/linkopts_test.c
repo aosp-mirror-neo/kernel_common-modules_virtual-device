@@ -25,6 +25,8 @@ void foo(void) {}
 
 extern void foo_alias(void);
 
-static __maybe_unused void bar(void) {
+static int __init bar(void) {
     foo_alias();
+    return 0;
 }
+module_init(bar);
