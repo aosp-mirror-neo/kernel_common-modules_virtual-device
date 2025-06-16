@@ -15,6 +15,8 @@
 
 #include <linux/module.h>
 
+void foo(void);
+
 MODULE_DESCRIPTION("A test module for Kleaf testing purposes");
 MODULE_AUTHOR("Hong, Yifan <elsk@google.com>");
 MODULE_LICENSE("GPL v2");
@@ -23,6 +25,6 @@ void foo(void) {}
 
 extern void foo_alias(void);
 
-void bar(void) {
+static __maybe_unused void bar(void) {
     foo_alias();
 }

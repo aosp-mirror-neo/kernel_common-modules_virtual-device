@@ -707,7 +707,9 @@ def _ddk_genfiles_test(name, kernel_build, **private_kwargs):
         out = name + "/generated.c",
         content = [
             "#include <linux/module.h>",
+            "void some_generated_func(void);",
             "void some_generated_func(void) {}",
+            "void some_exported_func(void);",
             "void some_exported_func(void) {}",
             "EXPORT_SYMBOL(some_exported_func);",
             "",
@@ -840,7 +842,7 @@ def _ddk_submodule_duplicate_linux_include_test(name, kernel_build, **private_kw
             out = "{}_generated_source_{}.c".format(name, i),
             content = [
                 "#include <include_test_lib.h>",
-                "void func_{}(void) {{}}".format(i),
+                "static __maybe_unused void func_{}(void) {{}}".format(i),
                 "",
             ],
             **private_kwargs
@@ -891,7 +893,7 @@ def _ddk_submodule_linux_include_in_top_level_test(name, kernel_build, **private
         out = "{}_generated_source.c".format(name),
         content = [
             "#include <include_test_lib.h>",
-            "void func(void) {}",
+            "static __maybe_unused void func(void) {}",
             "",
         ],
         **private_kwargs

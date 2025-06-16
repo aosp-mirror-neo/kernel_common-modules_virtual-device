@@ -20,7 +20,7 @@ MODULE_DESCRIPTION("A test module for Kleaf testing purposes");
 MODULE_AUTHOR("Yifan Hong <elsk@google.com>");
 MODULE_LICENSE("GPL v2");
 
-int include_test(void) {
+static __maybe_unused int include_test(void) {
     include_test_lib();
     return 0;
 }
