@@ -21,6 +21,8 @@ MODULE_LICENSE("GPL v2");
 
 extern void mylib(void);
 
-static __maybe_unused void myclient(void) {
+static int __init myclient(void) {
     mylib();
+    return 0;
 }
+module_init(myclient);

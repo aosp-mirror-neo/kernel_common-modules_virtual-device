@@ -21,6 +21,8 @@ MODULE_LICENSE("GPL v2");
 
 extern void my_child_lib(void);
 
-static __maybe_unused void mychild(void) {
+static int __init mychild(void) {
     my_child_lib();
+    return 0;
 }
+module_init(mychild);

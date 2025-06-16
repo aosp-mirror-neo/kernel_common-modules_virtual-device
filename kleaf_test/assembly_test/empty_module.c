@@ -21,6 +21,8 @@ MODULE_LICENSE("GPL v2");
 
 extern void foo(void);
 
-static __maybe_unused void bar(void) {
+static int __init bar(void) {
     foo();
+    return 0;
 }
+module_init(bar);
