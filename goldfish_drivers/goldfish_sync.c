@@ -320,21 +320,6 @@ goldfish_sync_timeline_fence_enable_signaling(struct dma_fence *fence)
 	return true;
 }
 
-static void goldfish_sync_timeline_fence_value_str(struct dma_fence *fence,
-						   char *str, int size)
-{
-	snprintf(str, size, "%llu", fence->seqno);
-}
-
-static void goldfish_sync_timeline_fence_timeline_value_str(
-				struct dma_fence *fence,
-				char *str, int size)
-{
-	struct goldfish_sync_timeline *tl = goldfish_dma_fence_parent(fence);
-
-	snprintf(str, size, "%d", tl->seqno);
-}
-
 static const struct dma_fence_ops goldfish_sync_timeline_fence_ops = {
 	.get_driver_name = goldfish_sync_timeline_fence_get_driver_name,
 	.get_timeline_name = goldfish_sync_timeline_fence_get_timeline_name,
@@ -342,8 +327,6 @@ static const struct dma_fence_ops goldfish_sync_timeline_fence_ops = {
 	.signaled = goldfish_sync_timeline_fence_signaled,
 	.wait = dma_fence_default_wait,
 	.release = goldfish_sync_timeline_fence_release,
-	.fence_value_str = goldfish_sync_timeline_fence_value_str,
-	.timeline_value_str = goldfish_sync_timeline_fence_timeline_value_str,
 };
 
 struct fence_data {
