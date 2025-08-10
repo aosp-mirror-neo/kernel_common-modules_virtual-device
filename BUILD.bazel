@@ -655,7 +655,6 @@ kernel_build(
         "zImage",
     ],
     arch = "arm",
-    build_config = "//common:build.config.common",
     check_defconfig = "disabled",
     defconfig = "//common:arch/arm64/configs/gki_defconfig",
     kmi_symbol_list_strict_mode = False,
