@@ -12,7 +12,6 @@ kernel_build(
     outs = ["fake.dtb"],
     arch = "arm64",
     base_kernel = "//common:kernel_aarch64",
-    defconfig = "//common:arch/arm64/configs/gki_defconfig",
     dtstree = "//common-modules/virtual-device/kleaf_test/dts",
     kconfig_ext = "Kconfig.ext",
     make_goals = [
