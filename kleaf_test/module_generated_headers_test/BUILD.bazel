@@ -1,0 +1,21 @@
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load(
+    "//build/kernel/kleaf:kernel.bzl",
+    "ddk_module",
+)
+
+# Test that when a module is built against ACK, it can find the SELinux headers.
+ddk_module(
+    name = "against_ack",
+    srcs = ["include_selinux.c"],
+    out = "against_ack.ko",
+    kernel_build = "//common:kernel_aarch64",
+)
+
+build_test(
+    name = "module_generated_headers_test",
+    targets = [
+        ":against_ack",
+    ],
+    visibility = ["//common-modules/virtual-device/kleaf_test:__subpackages__"],
+)
