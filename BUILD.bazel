@@ -944,5 +944,6 @@ pkg_install(
 
 kernel_dtstree(
     name = "rockpi4_dts",
+    srcs = ["rk3399-rock-pi-4b.dts"],
     visibility = ["//common:__pkg__"],
 )
