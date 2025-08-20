@@ -283,10 +283,10 @@ test_suite(
     ],
 )
 
-_FAKE_VIRT_DEVICE_X86_64_MODULES_LIST = [
-    paths.basename(m)
-    for m in get_gki_modules_list("x86_64")
-] + _VIRT_COMMON_MODULES + [
+_FAKE_VIRT_DEVICE_X86_64_MODULES_LIST = get_gki_modules_list(
+    "x86_64",
+    map_each = paths.basename,
+) + _VIRT_COMMON_MODULES + [
     "goldfish_address_space.ko",
     "nd_virtio.ko",
     "test_meminit.ko",
@@ -430,7 +430,10 @@ initramfs(
     ramdisk_compression = "lz4",
 )
 
-_FAKE_VIRT_DEVICE_AARCH64_MODULES_LIST = [paths.basename(m) for m in get_gki_modules_list("arm64")] + _VIRT_COMMON_MODULES + _VIRT_AARCH64_MODULES
+_FAKE_VIRT_DEVICE_AARCH64_MODULES_LIST = get_gki_modules_list(
+    "arm64",
+    map_each = paths.basename,
+) + _VIRT_COMMON_MODULES + _VIRT_AARCH64_MODULES
 
 write_file(
     name = "fake_virtual_device_aarch64_modules_list",
@@ -654,13 +657,13 @@ kernel_build(
         "zImage",
     ],
     makefile = "//common:Makefile",
-    module_outs = [
-        paths.basename(module)
-        for module in get_gki_modules_list("arm")
-    ] + [
-        paths.basename(module)
-        for module in get_kunit_modules_list("arm")
-    ] + _VIRT_COMMON_MODULES + _VIRT_AARCH64_MODULES + [
+    module_outs = get_gki_modules_list(
+        "arm",
+        map_each = paths.basename,
+    ) + get_kunit_modules_list(
+        "arm",
+        map_each = paths.basename,
+    ) + _VIRT_COMMON_MODULES + _VIRT_AARCH64_MODULES + [
         # keep sorted
         "cctrng.ko",
         "open-dice.ko",
@@ -720,13 +723,13 @@ kernel_build(
     defconfig = "//common:arch/arm64/configs/gki_defconfig",
     kmi_symbol_list_strict_mode = False,
     makefile = "//common:Makefile",
-    module_outs = [
-        paths.basename(module)
-        for module in get_gki_modules_list("arm64")
-    ] + [
-        paths.basename(module)
-        for module in get_kunit_modules_list("arm64")
-    ] + [
+    module_outs = get_gki_modules_list(
+        "arm64",
+        map_each = paths.basename,
+    ) + get_kunit_modules_list(
+        "arm64",
+        map_each = paths.basename,
+    ) + [
         # keep sorted
         "failover.ko",
         "net_failover.ko",
@@ -788,13 +791,13 @@ kernel_build(
     defconfig = "//common:arch/x86/configs/gki_defconfig",
     kmi_symbol_list_strict_mode = False,
     makefile = "//common:Makefile",
-    module_outs = [
-        paths.basename(module)
-        for module in get_gki_modules_list("x86_64")
-    ] + [
-        paths.basename(module)
-        for module in get_kunit_modules_list("x86_64")
-    ] + [
+    module_outs = get_gki_modules_list(
+        "x86_64",
+        map_each = paths.basename,
+    ) + get_kunit_modules_list(
+        "x86_64",
+        map_each = paths.basename,
+    ) + [
         # keep sorted
         "failover.ko",
         "net_failover.ko",
