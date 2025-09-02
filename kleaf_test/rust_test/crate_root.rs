@@ -9,7 +9,7 @@ use my_module::module_fun;
 module! {
     type: TestRustModule,
     name: "test_rust_module",
-    author: "Hong, Yifan <elsk@google.com>",
+    authors: ["Hong, Yifan <elsk@google.com>"],
     description: "Test Rust module",
     license: "GPL",
 }
