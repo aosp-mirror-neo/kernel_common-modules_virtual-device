@@ -85,7 +85,9 @@ filegroup(
 filegroup(
     name = "vkms_sources",
     srcs = [
+        "vkms/vkms_colorop.c",
         "vkms/vkms_composer.c",
+        "vkms/vkms_composer.h",
         "vkms/vkms_config.c",
         "vkms/vkms_config.h",
         "vkms/vkms_configfs.c",
@@ -97,6 +99,8 @@ filegroup(
         "vkms/vkms_drv.h",
         "vkms/vkms_formats.c",
         "vkms/vkms_formats.h",
+        "vkms/vkms_luts.c",
+        "vkms/vkms_luts.h",
         "vkms/vkms_output.c",
         "vkms/vkms_plane.c",
         "vkms/vkms_writeback.c",
