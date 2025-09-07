@@ -185,7 +185,7 @@ static struct sync_pt *goldfish_sync_fence_to_sync_pt(struct dma_fence *fence)
 }
 
 /* sync_state->mutex_lock must be locked. */
-struct goldfish_sync_timeline __must_check
+static struct goldfish_sync_timeline __must_check
 *goldfish_sync_timeline_create(struct goldfish_sync_state *sync_state)
 {
 	struct goldfish_sync_timeline *tl;
@@ -220,13 +220,13 @@ static void goldfish_sync_timeline_get(struct goldfish_sync_timeline *tl)
 	kref_get(&tl->kref);
 }
 
-void goldfish_sync_timeline_put(struct goldfish_sync_timeline *tl)
+static void goldfish_sync_timeline_put(struct goldfish_sync_timeline *tl)
 {
 	kref_put(&tl->kref, goldfish_sync_timeline_free);
 }
 
-void goldfish_sync_timeline_signal(struct goldfish_sync_timeline *tl,
-				   unsigned int inc)
+static void goldfish_sync_timeline_signal(struct goldfish_sync_timeline *tl,
+					  unsigned int inc)
 {
 	unsigned long flags;
 	struct sync_pt *pt, *next;
@@ -559,8 +559,8 @@ goldfish_sync_grab_commands(struct goldfish_sync_state *sync_state,
 	return to_do_end;
 }
 
-void goldfish_sync_run_hostcmd(struct goldfish_sync_state *sync_state,
-			       struct goldfish_sync_hostcmd *todo)
+static void goldfish_sync_run_hostcmd(struct goldfish_sync_state *sync_state,
+				      struct goldfish_sync_hostcmd *todo)
 {
 	struct goldfish_sync_timeline *tl =
 		(struct goldfish_sync_timeline *)(uintptr_t)todo->handle;
