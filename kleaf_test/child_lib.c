@@ -12,5 +12,5 @@
  * GNU General Public License for more details.
  *
  */
-
+void my_child_lib(void);
 void my_child_lib(void) {}
