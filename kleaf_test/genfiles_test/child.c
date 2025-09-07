@@ -20,6 +20,8 @@ MODULE_DESCRIPTION("A test module for Kleaf testing purposes");
 MODULE_AUTHOR("Hong, Yifan <elsk@google.com>");
 MODULE_LICENSE("GPL v2");
 
-static __maybe_unused void child_func(void) {
+static int __init child_func(void) {
     some_exported_func();
+    return 0;
 }
+module_init(child_func);
