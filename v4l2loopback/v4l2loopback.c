@@ -39,6 +39,10 @@
 #error This module is not supported on kernels before 4.0.0.
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0)
+#define from_timer(var, timer, member) timer_container_of(var, timer, member)
+#endif
+
 #if defined(timer_setup) && defined(from_timer)
 #define HAVE_TIMER_SETUP
 #endif
