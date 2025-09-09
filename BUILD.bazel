@@ -805,6 +805,141 @@ pkg_install(
 )
 
 kernel_build(
+    name = "virtual_device_aarch64_tv",
+    srcs = [":virtual_device_aarch64_common_sources"],
+    outs = [
+        "arch/arm64/boot/dts/arm/fvp-base-revc.dtb",
+    ],
+    base_kernel = "//common:kernel_aarch64_tv",
+    make_goals = [
+        "modules",
+        "arm/fvp-base-revc.dtb",
+    ],
+    makefile = "//common:Makefile",
+    module_outs = _VIRT_COMMON_MODULES + _VIRT_AARCH64_MODULES,
+    post_defconfig_fragments = [
+        "virtual_device_core.fragment",
+        "virtual_device.fragment",
+        "aarch64.fragment",
+    ],
+    strip_modules = True,
+    visibility = ["//common-modules:__subpackages__"],
+)
+
+kernel_abi(
+    name = "virtual_device_aarch64_tv_abi",
+    kernel_build = ":virtual_device_aarch64_tv",
+    kernel_modules = [":virtual_device_aarch64_tv_external_modules"],
+    kmi_symbol_list_add_only = True,
+)
+
+kernel_compile_commands(
+    name = "virtual_device_aarch64_tv_compile_commands",
+    deps = [
+        ":virtual_device_aarch64_tv",
+        ":virtual_device_aarch64_tv_external_modules",
+    ],
+)
+
+ddk_module(
+    name = "aarch64_tv/goldfish_drivers/goldfish_address_space",
+    srcs = [":goldfish_address_space_sources"],
+    out = "goldfish_drivers/goldfish_address_space.ko",
+    kernel_build = ":virtual_device_aarch64_tv",
+    deps = [":common_headers"],
+)
+
+ddk_module(
+    name = "aarch64_tv/goldfish_drivers/goldfish_pipe",
+    srcs = [":goldfish_pipe_sources"],
+    out = "goldfish_drivers/goldfish_pipe.ko",
+    kernel_build = ":virtual_device_aarch64_tv",
+    deps = [":common_headers"],
+)
+
+ddk_module(
+    name = "aarch64_tv/goldfish_drivers/goldfish_sync",
+    srcs = [":goldfish_sync_sources"],
+    out = "goldfish_drivers/goldfish_sync.ko",
+    kernel_build = ":virtual_device_aarch64_tv",
+    deps = [":common_headers"],
+)
+
+ddk_module(
+    name = "aarch64_tv/v4l2loopback",
+    srcs = [":v4l2loopback_sources"],
+    out = "v4l2loopback.ko",
+    kernel_build = ":virtual_device_aarch64_tv",
+    deps = [":common_headers"],
+)
+
+ddk_module(
+    name = "aarch64_tv/vkms",
+    srcs = [":vkms_sources"],
+    out = "vkms.ko",
+    kernel_build = ":virtual_device_aarch64_tv",
+    deps = [":common_headers"],
+)
+
+kernel_module_group(
+    name = "virtual_device_aarch64_tv_external_modules",
+    srcs = [
+        ":aarch64_tv/goldfish_drivers/goldfish_address_space",
+        ":aarch64_tv/goldfish_drivers/goldfish_pipe",
+        ":aarch64_tv/goldfish_drivers/goldfish_sync",
+        ":aarch64_tv/v4l2loopback",
+        ":aarch64_tv/vkms",
+        "//common-modules/virtio-media/driver:aarch64_tv/virtio-media",
+    ],
+)
+
+kernel_modules_install(
+    name = "virtual_device_aarch64_tv_modules_install",
+    kernel_build = ":virtual_device_aarch64_tv",
+    kernel_modules = [
+        ":virtual_device_aarch64_tv_external_modules",
+    ],
+)
+
+initramfs(
+    name = "virtual_device_aarch64_tv_initramfs",
+    kernel_modules_install = ":virtual_device_aarch64_tv_modules_install",
+    modules_blocklist = ":modules_aarch64.blocklist",
+    modules_options = ":modules.options",
+    ramdisk_compression = "lz4",
+)
+
+dependency_graph(
+    name = "virtual_device_aarch64_tv_dependency_graph",
+    colorful = True,
+    kernel_build = ":virtual_device_aarch64_tv",
+    kernel_modules = [
+        ":virtual_device_aarch64_tv_external_modules",
+    ],
+)
+
+pkg_files(
+    name = "virtual_device_aarch64_tv_dist_files",
+    srcs = [
+        ":virtual_device_aarch64_tv",
+        ":virtual_device_aarch64_tv_initramfs",
+        ":virtual_device_aarch64_tv_modules_install",
+        "//common:kernel_aarch64_tv",
+        "//common:kernel_aarch64_tv_additional_artifacts",
+        "//common:test_mappings_zip",
+        "//common:tests_zip_arm64",
+    ],
+    strip_prefix = strip_prefix.files_only(),
+    visibility = ["//visibility:private"],
+)
+
+pkg_install(
+    name = "virtual_device_aarch64_tv_dist",
+    srcs = [":virtual_device_aarch64_tv_dist_files"],
+    destdir = "out/virtual_device_aarch64_tv/dist",
+)
+
+kernel_build(
     name = "server_aarch64",
     srcs = [":virtual_device_aarch64_common_sources"],
     outs = [
