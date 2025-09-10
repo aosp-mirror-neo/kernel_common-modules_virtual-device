@@ -48,8 +48,8 @@ struct dxgprocess *dxgprocess_create(void)
 			hmgrtable_init(&process->handle_table, process);
 			hmgrtable_init(&process->local_handle_table, process);
 			INIT_LIST_HEAD(&process->process_adapter_list_head);
+			process->last_display_change_id = dxgglobal->last_display_change_id;
 		}
-		process->last_display_change_id = dxgglobal->last_display_change_id;
 	}
 	return process;
 }
