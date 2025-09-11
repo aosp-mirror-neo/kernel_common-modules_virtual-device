@@ -67,7 +67,6 @@ def _compdb_flags_test_impl(ctx):
     workspace_root_file = _get_workspace_root(hermetic_tools = hermetic_tools)
 
     script = hermetic_tools.setup + """
-        export RUNFILES_DIR=$(realpath .)
         export BUILD_WORKSPACE_DIRECTORY=$(cat {workspace_root_file})
         {test_script} {target}
     """.format(
