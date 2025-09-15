@@ -1025,6 +1025,7 @@ def _vendor_boot_test(name, kernel_build, kernel_modules_install, **private_kwar
         name = name + "_4_image",
         kernel_build = kernel_build,
         initramfs = name + "_initramfs",
+        initramfs_vendor_ramdisk_fragment_name = "dlkm",
         vendor_bootconfig = [
             "androidboot.selinux=enforcing",
             "foo.bar=baz",
@@ -1040,6 +1041,7 @@ def _vendor_boot_test(name, kernel_build, kernel_modules_install, **private_kwar
         check_vendor_bootconfig = True,
         expected_cmdline = "mycmdline1=1,mycmdline2=2 bootconfig",
         expected_header_version = 4,
+        expect_vendor_ramdisk_fragment = "ramdisk_dlkm",
         **private_kwargs
     )
 
