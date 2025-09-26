@@ -14,6 +14,7 @@
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_devicetree//devicetree:dtb.bzl", "dtb")
 load("@rules_pkg//pkg:install.bzl", "pkg_install")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_files", "strip_prefix")
 load(
@@ -25,7 +26,6 @@ load(
     "initramfs_modules_lists_test",
     "kernel_build",
     "kernel_compile_commands",
-    "kernel_dtstree",
     "kernel_module_group",
     "kernel_module_test",
     "kernel_modules_install",
@@ -843,8 +843,9 @@ pkg_install(
     destdir = "out/server_x86_64/dist",
 )
 
-kernel_dtstree(
-    name = "rockpi4_dts",
+dtb(
+    name = "rk3399-rock-pi-4b",
     srcs = ["rk3399-rock-pi-4b.dts"],
     visibility = ["//common:__pkg__"],
+    deps = ["//common:dtc_includes_aarch64"],
 )
