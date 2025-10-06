@@ -34,13 +34,21 @@ arguments = argparse.Namespace()
 
 class CompdbFlagsTest(unittest.TestCase):
     def test_config_matches(self):
-        with tempfile.NamedTemporaryFile() as temp:
-            subprocess.check_call([arguments.target, temp.name],
-                                  stdout=subprocess.DEVNULL)
-            content = json.load(temp)
-        for item in content:
-            with self.subTest(file=item["file"]):
-                self._check_flags_exist(item)
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_json = pathlib.Path(tmp_dir) / "compile_commands.json"
+            subprocess.check_call(
+                [
+                    arguments.target,
+                    "--out_directory",
+                    tmp_dir,
+                    str(tmp_json)
+                ],
+            stdout=subprocess.DEVNULL)
+            content = json.loads(tmp_json.read_text())
+
+            for item in content:
+                with self.subTest(file=item["file"]):
+                    self._check_flags_exist(item)
 
     def _check_flags_exist(self, item):
         directory = pathlib.Path(item["directory"])
