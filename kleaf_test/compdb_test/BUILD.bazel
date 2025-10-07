@@ -48,6 +48,7 @@ ddk_module(
         "subdir/module_2.c",
     ],
     out = "subdir/module.ko",
+    includes = ["subdir"],
     kernel_build = "@kleaf//common:kernel_aarch64",
     local_defines = ["TEST"],
 )
