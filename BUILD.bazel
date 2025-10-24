@@ -32,7 +32,7 @@ load(
     "merged_kernel_uapi_headers",
     "vendor_boot_image",
 )
-load("//common:modules.bzl", "get_gki_modules_list", "get_kunit_modules_list")
+load("//common:bazel/modules.bzl", "get_gki_modules_list", "get_kunit_modules_list")
 
 filegroup(
     name = "goldfish_address_space_sources",
