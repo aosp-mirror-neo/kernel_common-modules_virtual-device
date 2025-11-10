@@ -137,6 +137,7 @@ kernel_build(
     outs = [],
     arch = "x86_64",
     base_kernel = "//common:kernel_x86_64",
+    kmi_symbol_list = "//common:gki/x86_64/symbols/virtual_device",
     make_goals = [
         "modules",
     ],
@@ -153,6 +154,13 @@ kernel_build(
     ],
     strip_modules = True,
     visibility = ["//common-modules:__subpackages__"],
+)
+
+kernel_abi(
+    name = "virtual_device_x86_64_abi",
+    kernel_build = ":virtual_device_x86_64",
+    kernel_modules = [":virtual_device_x86_64_external_modules"],
+    kmi_symbol_list_add_only = True,
 )
 
 kernel_compile_commands(
