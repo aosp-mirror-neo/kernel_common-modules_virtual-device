@@ -24,6 +24,7 @@ load(
     "dependency_graph",
     "initramfs",
     "initramfs_modules_lists_test",
+    "kernel_abi",
     "kernel_build",
     "kernel_compile_commands",
     "kernel_module_group",
@@ -340,6 +341,7 @@ kernel_build(
         "arch/arm64/boot/dts/arm/fvp-base-revc.dtb",
     ],
     base_kernel = "//common:kernel_aarch64",
+    kmi_symbol_list = "//common:gki/aarch64/symbols/virtual_device",
     make_goals = [
         "modules",
         "arm/fvp-base-revc.dtb",
@@ -353,6 +355,13 @@ kernel_build(
     ],
     strip_modules = True,
     visibility = ["//common-modules:__subpackages__"],
+)
+
+kernel_abi(
+    name = "virtual_device_aarch64_abi",
+    kernel_build = ":virtual_device_aarch64",
+    kernel_modules = [":virtual_device_aarch64_external_modules"],
+    kmi_symbol_list_add_only = True,
 )
 
 kernel_compile_commands(
