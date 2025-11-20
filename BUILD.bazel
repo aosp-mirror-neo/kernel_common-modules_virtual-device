@@ -1192,24 +1192,29 @@ kernel_build(
     arch = "x86_64",
     base_kernel = None,
     build_config = "build.config.server.x86_64",
-    module_outs = sets.to_list(sets.make(
-        _GKI_MODULES_BASENAMES + [
-            # keep sorted
-            "failover.ko",
-            "net_failover.ko",
-            "virtio-gpu.ko",
-            "virtio-rng.ko",
-            "virtio_blk.ko",
-            "virtio_console.ko",
-            "virtio_dma_buf.ko",
-            "virtio_input.ko",
-            "virtio_net.ko",
-            "virtio_pci.ko",
-            "virtio_pci_legacy_dev.ko",
-            "virtio_pci_modern_dev.ko",
-            "virtio_snd.ko",
-            "vmw_vsock_virtio_transport.ko",
-        ],
+    module_outs = sets.to_list(sets.difference(
+        sets.make(
+            _GKI_MODULES_BASENAMES + [
+                "acpi_mdio.ko",
+                "ast.ko",
+                "ax88796b.ko",
+                "drm_ttm_helper.ko",
+                "drm_vram_helper.ko",
+                "fixed_phy.ko",
+                "fwnode_mdio.ko",
+                "iomap.ko",
+                "libphy.ko",
+                "mdio_devres.ko",
+                "of_mdio.ko",
+                "phylink.ko",
+                "selftests.ko",
+                "ttm.ko",
+            ],
+        ),
+        sets.make([
+            "zram.ko",
+            "zsmalloc.ko",
+        ]),
     )),
     strip_modules = False,
 )
