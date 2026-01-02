@@ -6,7 +6,7 @@ use kernel::prelude::*;
 module! {
     type: TestStandaloneRustModule,
     name: "test_standalone_rust_module",
-    author: "Hong, Yifan <elsk@google.com>",
+    authors: ["Hong, Yifan <elsk@google.com>"],
     description: "Test of a standalone module with a single .rs file.",
     license: "GPL",
 }
