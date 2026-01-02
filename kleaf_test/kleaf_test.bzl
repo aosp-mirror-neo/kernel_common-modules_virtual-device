@@ -1041,7 +1041,7 @@ def _vendor_boot_test(name, kernel_build, kernel_modules_install, **private_kwar
         check_vendor_bootconfig = True,
         expected_cmdline = "mycmdline1=1,mycmdline2=2 bootconfig",
         expected_header_version = 4,
-        expect_vendor_ramdisk_fragment = "ramdisk_dlkm",
+        expected_vendor_ramdisk_fragment = "ramdisk_dlkm",
         **private_kwargs
     )
 
