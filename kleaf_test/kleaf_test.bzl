@@ -1034,6 +1034,8 @@ def _vendor_boot_test(name, kernel_build, kernel_modules_install, **private_kwar
         outs = ["vendor_boot.img", "vendor-bootconfig.img"],
         unpack_ramdisk = False,
         header_version = 4,
+        vendor_fstab = Label("vendor.fstab"),
+        **private_kwargs
     )
     vendor_boot_image_test(
         name = name + "_4_test",
@@ -1042,6 +1044,7 @@ def _vendor_boot_test(name, kernel_build, kernel_modules_install, **private_kwar
         expected_cmdline = "mycmdline1=1,mycmdline2=2 bootconfig",
         expected_header_version = 4,
         expected_vendor_ramdisk_fragment = "ramdisk_dlkm",
+        expected_vendor_fstab = Label("vendor.fstab"),
         **private_kwargs
     )
 
@@ -1053,6 +1056,7 @@ def _vendor_boot_test(name, kernel_build, kernel_modules_install, **private_kwar
         initramfs = name + "_initramfs",
         outs = ["vendor_boot.img"],
         unpack_ramdisk = False,
+        **private_kwargs
     )
     vendor_boot_image_test(
         name = name + "_3_test",
