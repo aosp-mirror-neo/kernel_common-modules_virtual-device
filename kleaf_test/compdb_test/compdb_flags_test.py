@@ -59,6 +59,8 @@ class CompdbFlagsTest(unittest.TestCase):
             flag_file_real = directory / flag_file
             self.assertTrue(flag_file_real.exists(),
                             f"{flag_file_real} does not exist")
+            self.assertFalse("COMMON_OUT_DIR" in flag_file_real.read_text())
+            self.assertFalse("ROOT_DIR" in flag_file_real.read_text())
 
 
 if __name__ == "__main__":
