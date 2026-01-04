@@ -720,18 +720,17 @@ kernel_build(
     outs = [],
     arch = "riscv64",
     base_kernel = "//common:kernel_riscv64",
-    build_config = "//common:build.config.common",
-    defconfig = "//common:arch/riscv/configs/gki_defconfig",
-    defconfig_fragments = [
-        "virtual_device_core.fragment",
-        "virtual_device.fragment",
-    ],
     make_goals = [
         "modules",
     ],
     makefile = "//common:Makefile",
     module_outs = _VIRT_COMMON_MODULES + _VIRT_RISCV64_MODULES,
+    post_defconfig_fragments = [
+        "virtual_device_core.fragment",
+        "virtual_device.fragment",
+    ],
     strip_modules = True,
+    visibility = ["//common-modules:__subpackages__"],
 )
 
 kernel_compile_commands(
