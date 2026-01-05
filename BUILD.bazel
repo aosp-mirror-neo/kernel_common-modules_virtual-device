@@ -32,7 +32,15 @@ load(
     "merged_kernel_uapi_headers",
     "vendor_boot_image",
 )
-load("//common:bazel/modules.bzl", "get_gki_modules_list", "get_kunit_modules_list")
+load(
+    "//common:bazel/modules.bzl",
+    "get_gki_modules_list",
+    "get_kunit_modules_list",
+)
+load(
+    "//common-modules/virtual-device:module.bzl",
+    "filter_server_builtin_modules",
+)
 
 filegroup(
     name = "goldfish_address_space_sources",
@@ -722,27 +730,21 @@ kernel_build(
     base_kernel = None,
     defconfig = "//common:arch/arm64/configs/gki_defconfig",
     kmi_symbol_list_strict_mode = False,
+    make_goals = [
+        "Image",
+        "modules",
+    ],
     makefile = "//common:Makefile",
-    module_outs = get_gki_modules_list(
+    module_implicit_outs = get_gki_modules_list(
         "arm64",
-        map_each = paths.basename,
+        map_each = filter_server_builtin_modules,
     ) + get_kunit_modules_list(
         "arm64",
-        map_each = paths.basename,
-    ) + [
-        # keep sorted
-        "failover.ko",
-        "net_failover.ko",
-        "virtio-gpu.ko",
-        "virtio-rng.ko",
-        "virtio_dma_buf.ko",
-        "virtio_input.ko",
-        "virtio_net.ko",
-        "virtio_snd.ko",
-    ],
+        map_each = filter_server_builtin_modules,
+    ),
     post_defconfig_fragments = [
-        "virtual_device_core.fragment",
         "linux_distro.fragment",
+        "linux_distro_aarch64.fragment",
     ],
     strip_modules = False,
     trim_nonlisted_kmi = False,
@@ -790,26 +792,19 @@ kernel_build(
     base_kernel = None,
     defconfig = "//common:arch/x86/configs/gki_defconfig",
     kmi_symbol_list_strict_mode = False,
+    make_goals = [
+        "bzImage",
+        "modules",
+    ],
     makefile = "//common:Makefile",
-    module_outs = get_gki_modules_list(
+    module_implicit_outs = get_gki_modules_list(
         "x86_64",
-        map_each = paths.basename,
+        map_each = filter_server_builtin_modules,
     ) + get_kunit_modules_list(
         "x86_64",
-        map_each = paths.basename,
-    ) + [
-        # keep sorted
-        "failover.ko",
-        "net_failover.ko",
-        "virtio-gpu.ko",
-        "virtio-rng.ko",
-        "virtio_dma_buf.ko",
-        "virtio_input.ko",
-        "virtio_net.ko",
-        "virtio_snd.ko",
-    ],
+        map_each = filter_server_builtin_modules,
+    ),
     post_defconfig_fragments = [
-        "virtual_device_core.fragment",
         "linux_distro.fragment",
     ],
     strip_modules = False,
