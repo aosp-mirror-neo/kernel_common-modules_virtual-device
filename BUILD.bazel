@@ -982,6 +982,7 @@ kernel_build(
             for module in get_kunit_modules_list("arm64")
         ]),
         sets.make([
+            "rust_binder.ko",
             "virtio_balloon.ko",
             "virtio_blk.ko",
             "virtio_console.ko",
@@ -1058,6 +1059,7 @@ kernel_build(
         ]),
         sets.make([
             # keep sorted
+            "rust_binder.ko",
             "virtio_balloon.ko",
             "virtio_blk.ko",
             "virtio_console.ko",
