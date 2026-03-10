@@ -734,7 +734,13 @@ kernel_build(
         "modules",
     ],
     makefile = "//common:Makefile",
-    module_outs = _VIRT_COMMON_MODULES + _VIRT_RISCV64_MODULES,
+    module_outs = get_gki_modules_list(
+        "riscv64",
+        map_each = paths.basename,
+    ) + get_kunit_modules_list(
+        "riscv64",
+        map_each = paths.basename,
+    ) + _VIRT_COMMON_MODULES + _VIRT_RISCV64_MODULES,
     post_defconfig_fragments = [
         "virtual_device_core.fragment",
         "virtual_device.fragment",
