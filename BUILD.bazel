@@ -164,6 +164,7 @@ _VIRT_COMMON_MODULES = [
     "snd-aloop.ko",
     "system_heap.ko",
     "usbip-core.ko",
+    "usbip-vudc.ko",
     "v4l2-tpg.ko",
     "vhci-hcd.ko",
     "virt_wifi.ko",
