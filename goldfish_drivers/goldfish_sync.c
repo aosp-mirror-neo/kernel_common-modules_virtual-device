@@ -176,7 +176,7 @@ struct goldfish_sync_state {
 static struct goldfish_sync_timeline
 *goldfish_dma_fence_parent(struct dma_fence *fence)
 {
-	return container_of(fence->lock, struct goldfish_sync_timeline, lock);
+	return container_of(fence->extern_lock, struct goldfish_sync_timeline, lock);
 }
 
 static struct sync_pt *goldfish_sync_fence_to_sync_pt(struct dma_fence *fence)
