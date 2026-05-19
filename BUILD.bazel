@@ -969,6 +969,7 @@ kernel_build(
         ]),
         sets.make([
             "rust_binder.ko",
+            "vcpu_stall_detector.ko",
             "virtio_balloon.ko",
             "virtio_blk.ko",
             "virtio_console.ko",
@@ -1046,6 +1047,7 @@ kernel_build(
         sets.make([
             # keep sorted
             "rust_binder.ko",
+            "vcpu_stall_detector.ko",
             "virtio_balloon.ko",
             "virtio_blk.ko",
             "virtio_console.ko",
