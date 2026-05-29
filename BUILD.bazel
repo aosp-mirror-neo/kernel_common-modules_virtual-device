@@ -109,6 +109,7 @@ _VIRT_COMMON_MODULES = [
     "rtc-test.ko",
     "snd-aloop.ko",
     "system_heap.ko",
+    "test_meminit.ko",
     "usbip-core.ko",
     "v4l2-tpg.ko",
     "vhci-hcd.ko",
@@ -159,7 +160,6 @@ kernel_build(
     module_outs = _VIRT_COMMON_MODULES + [
         # keep sorted
         "nd_virtio.ko",
-        "test_meminit.ko",
         "virtio_pmem.ko",
     ],
     post_defconfig_fragments = [
@@ -305,7 +305,6 @@ _FAKE_VIRT_DEVICE_X86_64_MODULES_LIST = get_gki_modules_list(
 ) + _VIRT_COMMON_MODULES + [
     "goldfish_address_space.ko",
     "nd_virtio.ko",
-    "test_meminit.ko",
     "v4l2loopback.ko",
     "virtio_pmem.ko",
 ]
