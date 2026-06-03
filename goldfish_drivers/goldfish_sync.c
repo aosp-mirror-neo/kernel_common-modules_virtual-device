@@ -39,11 +39,6 @@
 
 #include <goldfish/goldfish_sync.h>
 
-struct sync_pt {
-	struct dma_fence base;	/* must be the first field in this struct */
-	struct list_head active_list;	/* see active_list_head below */
-};
-
 struct goldfish_sync_state;
 
 struct goldfish_sync_timeline {
@@ -60,6 +55,12 @@ struct goldfish_sync_timeline {
 	/* list of active (unsignaled/errored) sync_pts */
 	struct list_head	active_list_head;
 	spinlock_t		lock;	/* protects the fields above */
+};
+
+struct sync_pt {
+	struct dma_fence base;	/* must be the first field in this struct */
+	struct list_head active_list;	/* see active_list_head below */
+	struct goldfish_sync_timeline *tl;	/* parent */
 };
 
 /* The above definitions (command codes, register layout, ioctl definitions)
@@ -173,15 +174,15 @@ struct goldfish_sync_state {
 	struct work_struct work_item;
 };
 
-static struct goldfish_sync_timeline
-*goldfish_dma_fence_parent(struct dma_fence *fence)
-{
-	return container_of(fence->extern_lock, struct goldfish_sync_timeline, lock);
-}
-
 static struct sync_pt *goldfish_sync_fence_to_sync_pt(struct dma_fence *fence)
 {
 	return container_of(fence, struct sync_pt, base);
+}
+
+static struct goldfish_sync_timeline
+*goldfish_dma_fence_parent(struct dma_fence *fence)
+{
+	return goldfish_sync_fence_to_sync_pt(fence)->tl;
 }
 
 /* sync_state->mutex_lock must be locked. */
@@ -231,15 +232,26 @@ static void goldfish_sync_timeline_signal(struct goldfish_sync_timeline *tl,
 	unsigned long flags;
 	struct sync_pt *pt, *next;
 
+	/*
+	 * dma_fence has its own lock now: we need a separate list to
+	 * avoid aquiring two locks (dma_fence and goldfish_sync_timeline).
+	 */
+	LIST_HEAD(signaled_list);
+
 	spin_lock_irqsave(&tl->lock, flags);
 	tl->seqno += inc;
 
 	list_for_each_entry_safe(pt, next, &tl->active_list_head, active_list) {
-		/* dma_fence_is_signaled_locked has side effects */
-		if (dma_fence_is_signaled_locked(&pt->base))
-			list_del_init(&pt->active_list);
+		if (tl->seqno >= pt->base.seqno) {
+			list_move_tail(&pt->active_list, &signaled_list);
+		}
 	}
 	spin_unlock_irqrestore(&tl->lock, flags);
+
+	list_for_each_entry_safe(pt, next, &signaled_list, active_list) {
+		list_del_init(&pt->active_list);
+		dma_fence_signal(&pt->base);
+	}
 }
 
 static const struct dma_fence_ops goldfish_sync_timeline_fence_ops;
@@ -249,13 +261,14 @@ static struct sync_pt __must_check
 			 unsigned int value)
 {
 	struct sync_pt *pt = kzalloc(sizeof(*pt), GFP_KERNEL);
-
 	if (!pt)
 		return NULL;
 
+	pt->tl = tl;
+
 	dma_fence_init(&pt->base,
 		       &goldfish_sync_timeline_fence_ops,
-		       &tl->lock,
+		       NULL,
 		       tl->context,
 		       value);
 	INIT_LIST_HEAD(&pt->active_list);
