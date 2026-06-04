@@ -130,6 +130,12 @@ def kleaf_test(
         **private_kwargs
     )
 
+    _ddk_module_generate_btf_test(
+        name = name + "_ddk_module_generate_btf_test",
+        kernel_build = kernel_build,
+        **private_kwargs
+    )
+
     native.test_suite(
         name = name,
         tests = [
@@ -148,6 +154,7 @@ def kleaf_test(
             name + "_ddk_autofdo_test",
             name + "_kernel_boot_images_outs_contains_ramdisk_test",
             name + "_vendor_boot_test",
+            name + "_ddk_module_generate_btf_test",
         ] + extras,
         **kwargs
     )
@@ -1070,5 +1077,24 @@ def _vendor_boot_test(name, kernel_build, kernel_modules_install, **private_kwar
             name + "_4_test",
             name + "_3_test",
         ],
+        **private_kwargs
+    )
+
+def _ddk_module_generate_btf_test(
+        name,
+        kernel_build,
+        **private_kwargs):
+    ddk_module(
+        name = name + "_module",
+        kernel_build = kernel_build,
+        out = "test_generate_btf.ko",
+        srcs = ["nothing.c"],
+        generate_btf = True,
+        **private_kwargs
+    )
+
+    build_test(
+        name = name,
+        targets = [name + "_module"],
         **private_kwargs
     )
