@@ -48,8 +48,6 @@
  * exchange is properly mapped during a transfer.
  */
 
-#include "defconfig_test.h"
-
 #include <linux/acpi.h>
 #include <linux/bitops.h>
 #include <linux/bug.h>
