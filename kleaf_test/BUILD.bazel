@@ -20,6 +20,7 @@ kernel_build(
     ],
     makefile = "//common:Makefile",
     module_outs = [],
+    pahole = "//common:pahole",
     post_defconfig_fragments = [
         "kleaf_test.fragment",
     ],

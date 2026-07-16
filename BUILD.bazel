@@ -152,6 +152,7 @@ kernel_build(
         "nd_virtio.ko",
         "virtio_pmem.ko",
     ],
+    pahole = "//common:pahole",
     post_defconfig_fragments = [
         "virtual_device_core.fragment",
         "virtual_device.fragment",
@@ -351,6 +352,7 @@ kernel_build(
     ],
     makefile = "//common:Makefile",
     module_outs = _VIRT_COMMON_MODULES + _VIRT_AARCH64_MODULES,
+    pahole = "//common:pahole",
     post_defconfig_fragments = [
         "virtual_device_core.fragment",
         "virtual_device.fragment",
@@ -556,6 +558,7 @@ kernel_build(
     makefile = "//common:Makefile",
     module_outs = _VIRT_COMMON_MODULES + _VIRT_AARCH64_MODULES,
     page_size = "16k",
+    pahole = "//common:pahole",
     post_defconfig_fragments = [
         "virtual_device_core.fragment",
         "virtual_device.fragment",
@@ -673,6 +676,7 @@ kernel_build(
         "cctrng.ko",
         "open-dice.ko",
     ],
+    pahole = "//common:pahole",
     post_defconfig_fragments = [
         "virtual_device_core.fragment",
         "virtual_device.fragment",
@@ -739,6 +743,7 @@ kernel_build(
         "arm64",
         map_each = filter_server_builtin_modules,
     ),
+    pahole = "//common:pahole",
     post_defconfig_fragments = [
         "linux_distro.fragment",
         "linux_distro_aarch64.fragment",
@@ -801,6 +806,7 @@ kernel_build(
         "x86_64",
         map_each = filter_server_builtin_modules,
     ),
+    pahole = "//common:pahole",
     post_defconfig_fragments = [
         "linux_distro.fragment",
     ],
