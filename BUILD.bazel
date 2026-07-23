@@ -124,6 +124,7 @@ _VIRT_AARCH64_MODULES = [
     "drm_dma_helper.ko",
     "kfifo_buf.ko",
     "nd_virtio.ko",
+    "pkvm_iommu_temp.ko",
     "pl111_drm.ko",
     "psmouse.ko",
     "scmi_iio.ko",
