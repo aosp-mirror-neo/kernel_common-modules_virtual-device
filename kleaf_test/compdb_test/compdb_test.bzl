@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests on the cflags/aflags/ldflags for kernel_compile_commands()"""
+"""Generic test rule for compile_commands.json"""
 
 load("@kleaf//build/kernel/kleaf:hermetic_tools.bzl", "hermetic_toolchain")
 
@@ -47,7 +47,7 @@ def _get_workspace_root_impl(subrule_ctx, *, hermetic_tools, _a_source_file):
         outputs = [workspace_root_file],
         tools = hermetic_tools.deps,
         command = command,
-        mnemonic = "CompdbFlagsTestWorkspaceRoot",
+        mnemonic = "CompdbTestWorkspaceRoot",
     )
     return workspace_root_file
 
@@ -55,13 +55,13 @@ _get_workspace_root = subrule(
     implementation = _get_workspace_root_impl,
     attrs = {
         "_a_source_file": attr.label(
-            default = Label("compdb_flags_test.bzl"),
+            default = Label("compdb_test.bzl"),
             allow_single_file = True,
         ),
     },
 )
 
-def _compdb_flags_test_impl(ctx):
+def _compdb_test_impl(ctx):
     hermetic_tools = hermetic_toolchain.get(ctx)
 
     workspace_root_file = _get_workspace_root(hermetic_tools = hermetic_tools)
@@ -70,7 +70,7 @@ def _compdb_flags_test_impl(ctx):
         export BUILD_WORKSPACE_DIRECTORY=$(cat {workspace_root_file})
         {test_script} {target}
     """.format(
-        test_script = ctx.executable._test_script.short_path,
+        test_script = ctx.executable.test_script.short_path,
         target = ctx.executable.target.short_path,
         workspace_root_file = workspace_root_file.short_path,
     )
@@ -81,7 +81,7 @@ def _compdb_flags_test_impl(ctx):
         workspace_root_file,
     ], transitive_files = hermetic_tools.deps)
     runfiles = runfiles.merge_all([
-        ctx.attr._test_script[DefaultInfo].default_runfiles,
+        ctx.attr.test_script[DefaultInfo].default_runfiles,
         ctx.attr.target[DefaultInfo].default_runfiles,
     ])
     return DefaultInfo(
@@ -90,20 +90,22 @@ def _compdb_flags_test_impl(ctx):
         runfiles = runfiles,
     )
 
-compdb_flags_test = rule(
-    implementation = _compdb_flags_test_impl,
+compdb_test = rule(
+    implementation = _compdb_test_impl,
     attrs = {
-        "_test_script": attr.label(
+        "test_script": attr.label(
             cfg = "exec",
             executable = True,
-            default = Label(":compdb_flags_test"),
+            mandatory = True,
+            doc = "The test script (executable) to run",
         ),
         "target": attr.label(
-            doc = "the kernel_compile_commands() target",
+            doc = "the kernel_compile_commands() target under test",
             executable = True,
             # This is a exec platform executable, but to avoid transition on
             # kernel_build() / ddk_module(), don't apply transitions here.
             cfg = "target",
+            mandatory = True,
         ),
     },
     toolchains = [hermetic_toolchain.type],
