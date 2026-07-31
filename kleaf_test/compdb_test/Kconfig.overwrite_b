@@ -1,0 +1,3 @@
+config OVERWRITE_MOD_B
+    tristate "Overwrite Mod B"
+    default n

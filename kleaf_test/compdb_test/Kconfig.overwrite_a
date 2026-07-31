@@ -1,0 +1,3 @@
+config OVERWRITE_MOD_A
+    tristate "Overwrite Mod A"
+    default n
