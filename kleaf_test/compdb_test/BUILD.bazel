@@ -18,7 +18,7 @@ load(
     "kernel_compile_commands",
 )
 load("@rules_python//python:defs.bzl", "py_binary")
-load(":compdb_flags_test.bzl", "compdb_flags_test")
+load(":compdb_test.bzl", "compdb_test")
 
 ddk_module(
     name = "module_1",
@@ -36,9 +36,10 @@ kernel_compile_commands(
     deps = [":module_1"],
 )
 
-compdb_flags_test(
+compdb_test(
     name = "module_1_flags_test",
     target = ":module_1_compdb",
+    test_script = ":compdb_flags_test",
 )
 
 ddk_module(
@@ -58,9 +59,10 @@ kernel_compile_commands(
     deps = [":module_2"],
 )
 
-compdb_flags_test(
+compdb_test(
     name = "module_2_flags_test",
     target = ":module_2_compdb",
+    test_script = ":compdb_flags_test",
 )
 
 py_binary(
