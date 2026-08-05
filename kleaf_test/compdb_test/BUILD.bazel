@@ -71,10 +71,56 @@ py_binary(
     ],
 )
 
+ddk_module(
+    name = "overwrite_mod_a",
+    srcs = ["overwrite_mod_a.c"],
+    out = "overwrite_mod_a.ko",
+    defconfig = "defconfig.overwrite_a",
+    kconfig = "Kconfig.overwrite_a",
+    kernel_build = "@kleaf//common:kernel_aarch64",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)
+
+ddk_module(
+    name = "overwrite_mod_b",
+    srcs = ["overwrite_mod_b.c"],
+    out = "overwrite_mod_b.ko",
+    defconfig = "defconfig.overwrite_b",
+    kconfig = "Kconfig.overwrite_b",
+    kernel_build = "@kleaf//common:kernel_aarch64",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)
+
+kernel_compile_commands(
+    name = "overwrite_compdb",
+    tags = ["manual"],
+    deps = [
+        ":overwrite_mod_a",
+        ":overwrite_mod_b",
+    ],
+)
+
+py_binary(
+    name = "compdb_overwrite_test",
+    srcs = ["compdb_overwrite_test.py"],
+    deps = [
+        "@io_abseil_py//absl/testing:absltest",
+    ],
+)
+
+compdb_test(
+    name = "compdb_overwrite_test_target",
+    target = ":overwrite_compdb",
+    test_script = ":compdb_overwrite_test",
+)
+
 test_suite(
     name = "compdb_test",
     tests = [
         # keep sorted
+        ":compdb_overwrite_test_target",
         ":module_1_flags_test",
         ":module_2_flags_test",
     ],
