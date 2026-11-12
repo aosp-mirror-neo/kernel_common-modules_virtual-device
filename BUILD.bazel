@@ -185,7 +185,6 @@ _VIRT_AARCH64_MODULES = [
     "drm_dma_helper.ko",
     "kfifo_buf.ko",
     "nd_virtio.ko",
-    "pkvm_iommu_temp.ko",
     "pl111_drm.ko",
     "psmouse.ko",
     "scmi_iio.ko",
@@ -194,6 +193,11 @@ _VIRT_AARCH64_MODULES = [
     "virtio_mmio.ko",
     "virtio_pmem.ko",
     "virtual-cpufreq.ko",
+]
+
+_VIRT_AARCH64_KVM_MODULES = [
+    # keep sorted
+    "pkvm_iommu_temp.ko",
 ]
 
 kernel_build(
@@ -422,7 +426,7 @@ kernel_build(
         "arm/fvp-base-revc.dtb",
     ],
     makefile = "//common:Makefile",
-    module_outs = _VIRT_COMMON_MODULES + _VIRT_AARCH64_MODULES,
+    module_outs = _VIRT_COMMON_MODULES + _VIRT_AARCH64_MODULES + _VIRT_AARCH64_KVM_MODULES,
     post_defconfig_fragments = [
         "virtual_device_core.fragment",
         "virtual_device.fragment",
@@ -523,7 +527,7 @@ initramfs(
     ramdisk_compression = "lz4",
 )
 
-_FAKE_VIRT_DEVICE_AARCH64_MODULES_LIST = [paths.basename(m) for m in get_gki_modules_list("arm64")] + _VIRT_COMMON_MODULES + _VIRT_AARCH64_MODULES
+_FAKE_VIRT_DEVICE_AARCH64_MODULES_LIST = [paths.basename(m) for m in get_gki_modules_list("arm64")] + _VIRT_COMMON_MODULES + _VIRT_AARCH64_MODULES + _VIRT_AARCH64_KVM_MODULES
 
 write_file(
     name = "fake_virtual_device_aarch64_modules_list",
@@ -639,7 +643,7 @@ kernel_build(
         "arm/fvp-base-revc.dtb",
     ],
     makefile = "//common:Makefile",
-    module_outs = _VIRT_COMMON_MODULES + _VIRT_AARCH64_MODULES,
+    module_outs = _VIRT_COMMON_MODULES + _VIRT_AARCH64_MODULES + _VIRT_AARCH64_KVM_MODULES,
     page_size = "16k",
     post_defconfig_fragments = [
         "virtual_device_core.fragment",
