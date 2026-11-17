@@ -257,7 +257,7 @@ def _ddk_module_include_test(name, kernel_build, **private_kwargs):
             "include_test_lib_implicit.c",
             "include/include_test_lib.h",
         ],
-        copts = ["-include", "$(location include/include_test_lib.h)"],
+        copts = ["-include", "$(execpath include/include_test_lib.h)"],
         **private_kwargs
     )
 
